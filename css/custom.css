@@ -95,5 +95,16 @@ div .hideNews {
   display: none;
 }
 
+table, th, td {
+ border: 1px solid black;
+ border-collapse: collapse;
+}
 
+th, td {
+ padding: 15px;
+ text-align:left;
+}
 
+.budget-table {
+ background-color: #f1f1c1;
+}
