@@ -1,272 +1,131 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE HTML>
+<!--
+	Projection by TEMPLATED
+	templated.co @templatedco
+	Released for free under the Creative Commons Attribution 3.0 license (templated.co/license)
+-->
+<html>
+	<head>
+		<title>HeartStrawng</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+	</head>
+	<body>
 
-<!-- head defines a bunch of meta data -->
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/custom.css">
-<!-- title in the tab -->
-<title>HeartStrawng</title>
+		<!-- Header -->
+			<header id="header">
+				<div class="inner">
+					<a href="index.html" class="logo"><strong>HeartStrawng</strong> by HEALTHYBOIS</a>
+					<nav id="nav">
+						<a href = "index.html">Home</a>
+						<a href="ProjectDetails.html">Project Details</a>
+						<a href="Challenges.html">Challenges</a>
+						<a href="Budget.html">Budget</a>
+						<a href="ProjectSchedule.html">Project Schedule</a>
+					</nav>
+					<a href="#navPanel" class="navPanelToggle"><span class="fa fa-bars"></span></a>
+				</div>
+			</header>
 
-</head>
+		<!-- Banner -->
+			<section id="banner">
+				<div class="inner">
+					<header>
+						<h1>Welcome to HeartStrawng</h1>
+					</header>
 
-<!-- body -->
-<body>
+					<div class="flex ">
 
-<p><h1>HeartStrawng: A Health and Water Intake Monitoring Application</h1>
-<h2>Team Members</h2>
-  <ul style="list-style-type:disc">
-    <li>Shawn Michael Linnebach III</li>
-    <li>Nathan Hummel</li>
-    <li>Brady Smith</li>
-  </ul>
-<h3>New Member Possibility</h3>
-<p> We are open to adding one more member to the team. We would prefer someone experience in hardware and embedded systems design. If interested please contact 
-  Michael Linnebach at michael_linnebach08@yahoo.com or (801) 680-8712
-</p>
-<hr>
-  
-<h3>Abstract</h3>
-  <p> HeartStrawng by Healthy Bois. Water is an essential part of life as we know it, without it life would be dry. Here at HealthyBois we understand that remembering to drink
-  enough water each day can be difficult that's why we developed HeartStrawng. Heart Stawng is a combination of an adaptable drinking straw and bracelet heart rate monitor to 
-  track your water intake and heart health when connected to the HealthyBois app. Our app allows you to set goals, see results and feel the sense of accomplishment as you achieve 
-  them.  The app helps visualize your water intake and heart rate over time and will give you friendly reminders to help keep you on track with your personally set health goals.
-  This will help people stay on track and on top of their health goals which science has proven, makes you more likely to be satisfied with your life.
-  </p>
-<hr>
-  
-<h2>Challenges</h2>
-  <h3>Software Challenges:</h3>
-  <ul style="list-style-type:disc">
-    <li>Configuring a reliable communication protocol between the app and sensors</li>
-    <li>Designing the database which will form the backend of our app</li>
-    <li>Making the app look visualally appealing to users</li>
-  </ul>
-  <h3>Hardware Challenges:</h3>
-  <ul style="list-style-type:disc">
-    <li>Making the bracelet heart-rate monitor small enough to fit comfortably on the wrist and accurately measure the heart rate</li>
-    <li>Figuring out battery/charging for the bracelet and straw</li>
-    <li>Configuring the liquid sensor to accurately measure water intake</li>
-  </ul>
-<hr>
-  
-<h2>Proposed Methods</h2>
-  <h3>Mitigating Software Challenges:</h3>
-  <ul style="list-style-type:disc">
-    <li>Use bluetooth to communicate between the app and sensors. This has been proven to be reliable in past experiences</li>
-    <li>We will choose a reliable database server (preferably cheap) and design the database structure around the entity-relationship model</li>
-    <li>Two of our team members have mobile development experience and we will beta test the application design with users before release</li>
-  </ul>
-  <h3>Hardware Challenges:</h3>
-  <ul style="list-style-type:disc">
-    <li>We know it has been done before and the components should be small enough to make it work</li>
-    <li>We can either go the route of using solar power or we can make our bracelet and straw rechargable through a standard USB-C cable</li>
-    <li>We have found a water sensor that we can use to measure the water depth and then create an embedded system to read and transmit this data</li>
-  </ul>
-<hr>
+						<div>
+							<span class="icon fa-car"></span>
+							<h3>Shawn Michael Linnebach</h3>
+						</div>
 
-<h2>Monetary Items</h2>
-  <table id="budget-table">
-    <tr>
-      <th>Item</th>
-      <th>Cost ($)</th>
-    </tr>
-    <tr>
-      <td>Heartrate Sensor</td>
-      <td>25</td>
-    </tr>
-    <tr>
-      <td>Liquid Depth Sensor</td>
-      <td>40</td>
-    </tr>
-    <tr>
-      <td>Bracelet Embedded System Board</td>
-      <td>10</td>
-    </tr>
-    <tr>
-      <td>Water Sensor Embedded System Board</td>
-      <td>10</td>
-    </tr>
-    <tr>
-      <td>Miscallaneos Embedded System Components</td>
-      <td>15</td>
-    </tr>
-    <tr>
-      <td>Database Server Usage</td>
-      <td>5</td>
-    </tr>
-    <tr>
-      <td>3D Printed Boxes for Embedded Systems</td>
-      <td>20</td>
-    </tr>
-    <tr>
-      <td>Water Bottle Straw</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>Total</th>
-      <td>127</td>
-    </tr>
-  </table>
-  
-<hr>
-  
-<h2>Project Schedule</h2> 
-  <table id="budget-table">
-    <tr>
-      <th>Week</th>
-      <th>Agenda</th>
-    </tr>
-    <tr>
-      <td>Feb. 20th-26th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Begin project website</li>
-          <li>Determine project schedule</li>
-          <li>Turn in version 1 of website</li>
-        </ul>
-      </td>
-    </tr>
-    <tr>
-      <td>Feb. 27th-Mar. 5th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Refine website, make it looks pretty</li>
-          <li>Continue research into specifics of what needs to be done for the project</li>
-          <li>Figure out backend and frontend languages to use for the application</li>
-          <li>Finalize the choice for sensors to use</li>
-        </ul>
-      </td>
-    </tr>
-    <tr>
-      <td>Mar. 6th-Mar. 12th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Refine website, review/add information</li>
-          <li>Choose database to use for the application</li>
-          <li>Choose deployment option for the application</li>
-          <li>Turn in version 2 of website</li>
-        </ul>
-      </td>
-    </tr>
-    <tr>
-      <td>Mar. 13th-Mar. 19th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Refine website, based on instructor feedback</li>
-          <li>Look into components needed for the embedded systems</li>
-        </ul>
-      </td>
-    </tr>
-    <tr>
-      <td>Mar. 20th-Mar. 26th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Refine website, make it somewhat interactive</li>
-          <li>Turn in website version 3, final version</li>
-          <li>Start the embedded system design
-        </ul>
-      </td>
-    </tr>
-    <tr>
-      <td>Mar. 27th-Apr. 2nd</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Begin work on proposal</li>
-          <li>Create storyboard containing the flow of the app’s different pages and aspects</li>
-          <li>Working in how the hardware elements interact with the app</li>
-          <li>Begin database design work</li>
-        </ul>
-      </td>
-    </tr>    
-    <tr>
-      <td>Apr. 3rd-Apr. 9th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Work on proposal</li>
-          <li>Start work on the app prototype</li>
-          <li>Begin to break down the various backend and app design work that will need to be done based on the storyboard</li>
-        </ul>
-      </td>
-    </tr>  
-    <tr>
-      <td>Apr. 10th-Apr. 16th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Work on proposal</li>
-          <li>Work on the app prototype</li>
-          <li>Finish embedded system design for hardware components and order the boards</li>
-        </ul>
-      </td>
-    </tr>  
-    <tr>
-      <td>Apr. 17th-Apr. 23rd</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Finish proposal</li>
-          <li>Turn in final proposal pdf</li>
-          <li>Solder embedded system board</li>
-          <li>Work on app prototype</li>
-        </ul>
-      </td>
-    </tr>  
-    <tr>
-      <td>Apr. 24th-Apr. 30th</td>
-      <td>  
-        <ul style="list-style-type:disc">
-          <li>Finish prototype</li>
-          <li>Demonstrate prototype</li>
-        </ul>
-      </td>
-    </tr>
-  </table>
- <hr>
-  
-<h2> Collaboration Plan <h2>
-  <h3>Communication Method</h3>  
-      <ul style="list-style-type:disc">
-        <li>We will communicate primarily using Discord and Zoom</li>
-      </ul>
-   <h3>Conflict Resolution</h3>  
-      <ul style="list-style-type:disc">
-        <li>In the event of a disagreement between teammates we will think objectively about the problem that lead 
-          to the conflict and compromise on a course of action that is best for the team. In this situation the third 
-          will act as the arbitrator. 
-        </li>
-      </ul>
-  <h3>Team Momentum</h3>
-      <ul style="list-style-type:disc">
-        <li>We will ensure team momentum by having frequent progress check ins and through encouragement to reach out
-          to the team when one of us gets stuck.
-        </li>
-      </ul>  
-   <h3>Failure to meet expectation</h3>
-      <ul style="list-style-type:disc">
-        <li> In the event that a teammate falls behind on their progress we will be willing to work together to get the
-          project back on track as well as reevaluate the progress goals to ensure they are realistic. In this event we
-          expect the team member to notifiy the rest of the team early about the failure to progress.
-        </li>
-      </ul>
-  <h3>Budget Distribution</h3>
-    <ul style="list-style-type:disc">
-      <li>The cost of the project will be evenly distributed between all team members.</li>
-    </ul>
-</div>
+						<div>
+							<span class="icon fa-camera"></span>
+							<h3>Brady Smith</h3>
+						</div>
+
+						<div>
+							<span class="icon fa-bug"></span>
+							<h3>Nathan Hummel</h3>
+						</div>
+
+					</div>
+				</div>
+			</section>
 
 
+		<!-- Three -->
+			<section id="three" class="wrapper align-center">
+				<div class="inner">
+					<div class="flex flex-2">
+						<article>
+							<div class="image round">
+								<img src="images/pic01.jpg" alt="Pic 01" />
+							</div>
+							<header>
+								<h3>Project Details</h3>
+							</header>
+							<p>Heart Strawng is a health monitoring application designed by HealthyBois.<br/>
+								This application will monitor water intake and heart rate through specialized connnected sensors.<br/>
+								You can access your data on the mobile application to track progress goals.</p>
+							<footer>
+								<a href="ProjectDetails.html" class="button">Learn More</a>
+							</footer>
+						</article>
+						<article>
+							<div class="image round">
+								<img src="images/pic02.jpg" alt="Pic 02" />
+							</div>
+							<header>
+								<h3>Challenges</h3>
+							</header>
+							<p>Overall this project will have many challenges related to both software and hardware. <br/>
+								The biggest software challenge will be configuring the communication protocol between the app and sensors.<br/>
+							        Then, the biggest hardware challenge is going to be making the monitoring straw sensor small, portable, and figuring out a way to keep it charged.</p>
+							<footer>
+								<a href="Challenges.html" class="button">Learn More</a>
+							</footer>
+						</article>
+						<article>
+							<div class="image round">
+								<img src="images/pic02.jpg" alt="Pic 02" />
+							</div>
+							<header>
+								<h3>Budget</h3>
+							</header>
+							<p>We plan on spending approximately $130 on this project. <br/>
+								This will cover the cost of all hardware components as well as our database costs.</p>
+							<footer>
+								<a href="Budget.html" class="button">See Full Breakdown</a>
+							</footer>
+						</article>
+						<article>
+							<div class="image round">
+								<img src="images/pic02.jpg" alt="Pic 02" />
+							</div>
+							<header>
+								<h3>Project Schedule</h3>
+							</header>
+							<p>Overall, we have a fairly good idea of the schedule for our project.<br/>
+								We will finish the project website by March 26th and will have a working <br/>
+								prototype by April 30th ready for demonstration. Furthermore, we have worked <br/>
+								out team contingency plans in the event of us getting off schedule.</p>
+							<footer>
+								<a href="Budget.html" class="button">See Full Schedule</a>
+							</footer>
+						</article>
+					</div>
+				</div>
+			</section>
 
-<hr>
-<footer>Last update 02/25/2021</footer>
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/skel.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
 
-</div>
-
-</body>
-  
-  <!--<script src="js/news.js"></script>
-  <script src="js/index.js"></script>-->
-
+	</body>
 </html>
-
-
