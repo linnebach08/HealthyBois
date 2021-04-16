@@ -42,6 +42,15 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+void transmitChar (char c);
+void transmitString (char c[]);
+void initializeClocks ();
+void initializeLEDs ();
+void initializeUART ();
+void initializeHeartRateChip ();
+void setupInterupts ();
+void initializeI2C ();
+void setupTimer ();
 
 /* USER CODE END PFP */
 
@@ -66,40 +75,17 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	initializeClocks();
+	initializeLEDs();
+	initializeI2C();
+	initializeUART();
+	initializeHeartRateChip();
+	setupInterupts();
+	setupTimer();
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-	RCC->AHBENR |= (1 << 19) | (1 << 18);
-	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
-	
-	// LED initialization
-	GPIOC->MODER |= (1 << 12) | (1 << 14) | (1 << 16) | (1 << 18);
-  GPIOC->OTYPER |= (0 << 6) | (0 << 7) | (0 << 8) | (0 << 9);
-  GPIOC->OSPEEDR |= (1 << 13) | (1 << 15) | (1 << 17) | (1 << 19);
-  GPIOC->PUPDR &= 0;
-	
-	// PB11 and PB13 and PB14
-	GPIOB->MODER |= (1 << 23) | (1 << 27) | (1 << 28);
-	GPIOB->OTYPER |= (1 << 11) | (1 << 13);
-	//GPIOB->OTYPER &= ~(1 << 14);
-	GPIOB->AFR[1] |= (1 << 12) | (1 << 22) | (1 << 20);
-	GPIOB->ODR |= (1 << 14);
-	GPIOB->PUPDR |= (1 << 22) | (1 << 26);
-	
-	// PC0
-	GPIOC->MODER |= (1 << 0);
-	GPIOC->OTYPER &= ~(1 << 0);
-	GPIOC->ODR |= (1 << 0);
-		
-	// Using 100kHz standard-mode as defined by figure 5.4 in lab manual
-	I2C2->TIMINGR |= (1 << 28) | (0xF << 8) | (0x13 << 0) | (0x2 << 16) | (0x4 << 20);
-	
-	// Enable the peripheral
-	I2C2->CR1 |= (1 << 1) | (1 << 0) | (1 << 4) | (1 << 6) | (1 << 7);
 	
 	// Slave address is 0xBE/BF, number of bytes to transmit is 2, write operation, start bit set
 	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
@@ -427,7 +413,87 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void initializeClocks(){
+	/* USER CODE BEGIN SysInit */
+	RCC->AHBENR |= (1 << 19) | (1 << 18);
+	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+	RCC->APB1ENR |=  (1 << 18);
+	RCC->APB2ENR |= (1 << 0);
+	RCC->APB1ENR |= (1 << 0) | (1 << 1);
+}
 
+void initializeLEDs(){
+		// LED initialization
+	GPIOC->MODER |= (1 << 12) | (1 << 14) | (1 << 16) | (1 << 18);
+  GPIOC->OTYPER |= (0 << 6) | (0 << 7) | (0 << 8) | (0 << 9);
+  GPIOC->OSPEEDR |= (1 << 13) | (1 << 15) | (1 << 17) | (1 << 19);
+  GPIOC->PUPDR &= 0;
+}
+
+void initializeI2C(){
+	// PB11 and PB13 and PB14
+	GPIOB->MODER |= (1 << 23) | (1 << 27) | (1 << 28);
+	GPIOB->OTYPER |= (1 << 11) | (1 << 13);
+	//GPIOB->OTYPER &= ~(1 << 14);
+	GPIOB->AFR[1] |= (1 << 12) | (1 << 22) | (1 << 20);
+	GPIOB->ODR |= (1 << 14);
+	GPIOB->PUPDR |= (1 << 22) | (1 << 26);
+	
+	// PC0
+	GPIOC->MODER |= (1 << 0);
+	GPIOC->OTYPER &= ~(1 << 0);
+	GPIOC->ODR |= (1 << 0);
+		
+	// Using 100kHz standard-mode as defined by figure 5.4 in lab manual
+	I2C2->TIMINGR |= (1 << 28) | (0xF << 8) | (0x13 << 0) | (0x2 << 16) | (0x4 << 20);
+	
+	// Enable the peripheral
+	I2C2->CR1 |= (1 << 1) | (1 << 0) | (1 << 4) | (1 << 6) | (1 << 7);
+}
+
+void initializeUART(){
+	GPIOB->MODER |= (1 << 21) | (1 << 23);
+	GPIOB->MODER &= ~((1 << 22) | (1 << 20));
+	GPIOB->AFR[1] |= (1 << 10) | (1 << 14);
+	GPIOB->AFR[1] &= ~((1 << 8) | (1 << 9) | (1 << 11) | (1 << 12) | (1 << 13) | (1 << 15));
+		
+	uint32_t freq = HAL_RCC_GetHCLKFreq();
+	USART3->BRR |= (freq / 115200);
+	USART3->CR1 |= (1 << 2) | (1 << 3);
+	USART3->CR1 |= (1 << 0) | (1 << 5);
+}
+
+void initializeHeartRateChip(){
+	// TODO set up chip values through writing I2C values to it 
+	// Set up write 2 bytes first go chip address, then register address, then what you want to write
+	// Refer to Michael I2C lab code
+	
+}
+
+void setUpTimer(){
+	// Set up timer to go off every so often
+	// Refer to lab 3. Possibly Nathan's code if it is better commented
+}
+
+void setUpInterrupts(){
+}
+
+void transmitChar(char c){
+		while(1) {
+		if (USART3->ISR & (1 << 7)) {
+				break;
+		}			
+	}
+	USART3->TDR = c;
+}
+
+void transmitString (char c[]){
+	uint32_t i = 0;
+	while (c[i] != '\0') {
+		transmitChar(c[i]);
+		i = i + 1;
+	}
+}
 /* USER CODE END 4 */
 
 /**
