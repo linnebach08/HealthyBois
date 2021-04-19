@@ -1,0 +1,15 @@
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\bin\Debug\netstandard2.0\HeartStrawng.deps.json
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\bin\Debug\netstandard2.0\HeartStrawng.dll
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\bin\Debug\netstandard2.0\ref\HeartStrawng.dll
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\bin\Debug\netstandard2.0\HeartStrawng.pdb
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.csprojAssemblyReference.cache
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\App.xaml.g.cs
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\MainPage.xaml.g.cs
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.AssemblyInfoInputs.cache
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.AssemblyInfo.cs
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.csproj.CoreCompileInputs.cache
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\XamlC.stamp
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.dll
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\ref\HeartStrawng.dll
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\HeartStrawng.pdb
+C:\Users\brady\Documents\HealthyBois\HealthyBois\App\HeartStrawng\HeartStrawng\HeartStrawng\obj\Debug\netstandard2.0\Welcome.xaml.g.cs

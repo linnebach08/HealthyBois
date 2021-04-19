@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "wquzlC7YHygq8fD71BOu1bIogBC7kVUxNJJbtTZTbZBWKHxmvgfIVfEzJtwv25yn0YinNGXpNAOWzwa0lVX23g==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\brady\\Documents\\HealthyBois\\HealthyBois\\App\\HeartStrawng\\HeartStrawng\\HeartStrawng.iOS\\HeartStrawng.iOS.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\brady\\.nuget\\packages\\system.numerics.vectors\\4.5.0\\system.numerics.vectors.4.5.0.nupkg.sha512",
+    "C:\\Microsoft\\Xamarin\\NuGet\\xamarin.essentials\\1.3.1\\xamarin.essentials.1.3.1.nupkg.sha512",
+    "C:\\Microsoft\\Xamarin\\NuGet\\xamarin.forms\\4.5.0.495\\xamarin.forms.4.5.0.495.nupkg.sha512"
+  ],
+  "logs": []
+}
