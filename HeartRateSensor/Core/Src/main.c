@@ -44,21 +44,22 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void transmitChar (char c);
 void transmitString (char c[]);
-void initializeClocks ();
-void initializeLEDs ();
-void initializeUART ();
-void initializeHeartRateChip ();
-void setUpInterrupts ();
-void initializeI2C ();
-void setupTimer ();
-void EXTI0_1_IRQHandler();
-void TIM2_IRQHandler();
+void initializeClocks (void);
+void initializeLEDs (void);
+void initializeUART (void);
+void initializeHeartRateChip (void);
+void setUpInterrupts (void);
+void initializeI2C (void);
+void setUpTimer (void);
+void EXTI4_15_IRQHandler(void);
+void TIM2_IRQHandler(void);
 void restartWriteCondition(uint16_t);
 void restartReadCondition(uint16_t);
-void waitForTxis();
-void waitForTC();
+void waitForTxis(void);
+void waitForTC(void);
 void WaitForRXNEorNACKF(void);
 volatile uint32_t _sample;
+volatile uint32_t counter = 0;
 
 
 
@@ -88,302 +89,18 @@ int main(void)
 	initializeClocks();
 	initializeLEDs();
 	initializeI2C();
-	initializeUART();
+	//initializeUART();
 	initializeHeartRateChip();
 	setUpInterrupts();
-	setupTimer();
+	//setUpTimer();
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 	
-	// Slave address is 0xBE/BF, number of bytes to transmit is 2, write operation, start bit set
-	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-	I2C2->CR2 |= (1 << 16) | (0xBE << 1); 
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);
-	
-		
-	// Should be breaking when TXIS is set
-	while (1) {
-		if (I2C2->ISR & (1 << 4)) {
-				GPIOC->ODR |= (1 << 6);
-				HAL_Delay(100);
-				break;
-		}
-		if (I2C2->ISR & (1 << 1)) {
-			break;
-		}
-	}
-	
-	I2C2->TXDR = (0x0F << 0);
-	
-	while(!(I2C2->ISR & (1 << 6))) {
-	}
-
-
-	I2C2->CR2 |= (1 << 7) | (1 << 6) | (1 << 4) | (1 << 2) | (1 << 1);
-	I2C2->CR2 |= (1 << 16);
-	I2C2->CR2 |= (1 << 10);
-	I2C2->CR2 |= (1 << 13);
-	
-	while(!(I2C2->ISR & (I2C_ISR_RXNE))) {
-		if (I2C2->ISR & (I2C_ISR_NACKF)) {
-			GPIOC->ODR |= (1 << 6);
-			break;
-		}
-	}
-	
-
-	while(!(I2C2->ISR & (I2C_ISR_TC))) {
-	}
-	
-	// Toggle green led if correct value is read from WHO_AM_I
-	if (I2C2->RXDR & 0xD4) {
-		GPIOC->ODR |= (1 << 9);
-	}
-	
-
-	I2C2->CR2 |= (1 << 14);
-	
-	I2C2->CR2 &= ~((0x7FFFFFF));
-	
-	// Slave address is 0x20 (CTRL_REG1), number of bytes to transmit is 1, read operation, start bit set
-	// Sending enable bits for x and y axes to gyroscope
-	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-	I2C2->CR2 |= (1 << 16) | (0x6B << 1); 
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);
-	
-	while(1) {
-		if (I2C2->ISR & (1 << 4)) {
-			//red
-			GPIOC->ODR |= (1 << 6);
-			break;
-		}
-		if (I2C2->ISR & (1 << 1)) {
-			//orange
-			GPIOC->ODR |= (1 << 8);
-			break;
-		}
-	}
-	
-	//blue
-		GPIOC->ODR |= (1 << 7);
-
-	// x and y enable bits are set, as well as the PD bit which
-	// puts the sensor in normal or sleep mode
-	I2C2->TXDR = (0x20 << 0);
-	
-	while(!(I2C2->ISR & (I2C_ISR_TC))) {
-	}
-	GPIOC->ODR ^= (1 << 7);
-	
-	// Slave address is 0x20 (CTRL_REG1), number of bytes to transmit is 1, read operation, start bit set
-	// Sending enable bits for x and y axes to gyroscope
-	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-	I2C2->CR2 |= (1 << 16) | (0x6B << 1); 
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);
-	
-	while(1) {
-		if (I2C2->ISR & (1 << 4)) {
-			//red
-			GPIOC->ODR |= (1 << 6);
-			break;
-		}
-		if (I2C2->ISR & (1 << 1)) {
-			//orange
-			//GPIOC->ODR |= (1 << 8);
-			break;
-		}
-	}
-	GPIOC->ODR |= (1 << 6);
-	//GPIOC->ODR ^= (1 << 7) | (1 << 8) | (1 << 9);
-	I2C2->TXDR = (0xB << 0);
-	
-	while(!(I2C2->ISR & (I2C_ISR_TC))) {
-	}
-		GPIOC->ODR ^= (1 << 7) | (1 << 8) | (1 << 9);
-
-	//GPIOC->ODR ^= (1 << 7);
-	I2C2->CR2 |= (1 << 14);
-	
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-	
-	int16_t xVal;
-	int16_t yVal;
-	int8_t lowVal;
-	int8_t highVal;
-	
   while (1)
   {
-		HAL_Delay(100);
-		/*// Slave address is 0xA8 (OUT_X_L and H), number of bytes to transmit is 2, read operation, start bit set
-		// Retrieving x axis data from gyroscope
-		I2C2->CR2 |= (1 << 5) | (1 << 3) | (1 << 7);
-		I2C2->CR2 &= ~((1 << 6) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0));
 	
-		I2C2->CR2 |= (1 << 17);
-		I2C2->CR2 |= (1 << 10);
-		I2C2->CR2 |= (1 << 13);
-		
-		while(!(I2C2->ISR & I2C_ISR_RXNE)) {
-			if (I2C2->ISR & I2C_ISR_NACKF) {
-				//GPIOC->ODR |= (1 << 6);
-				break;
-			}
-		}*/
-		
-		
-		
-	I2C2->CR2 &= ~((0x7FFFFFF));
-	
-	// Slave address is 0x6B (Gyro), number of bytes to transmit is 1, read operation, start bit set
-	// Sending enable bits for x and y axes to gyroscope
-	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-	I2C2->CR2 |= (1 << 16) | (0x6B << 1); 
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);
-	
-	/*I2C2->CR2 |= (1 << 5);
-	I2C2->CR2 &= ~((1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
-	
-	I2C2->CR2 |= (1 << 16);
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);*/
-
-	
-	while(1) {
-		if (I2C2->ISR & (1 << 4)) {
-			//red
-			GPIOC->ODR |= (1 << 6);
-			//	HAL_Delay(100);
-			break;
-		}
-		if (I2C2->ISR & (1 << 1)) {
-			//orange
-			//GPIOC->ODR |= (1 << 8);
-			break;
-		}
-	}
-		GPIOC->ODR |= (1 << 9);
-
-
-		I2C2->TXDR = (0xA8 << 0);
-
-		while(!(I2C2->ISR & I2C_ISR_TC)) {
-		}
-		
-		lowVal = I2C2->RXDR;
-		
-		while(!(I2C2->ISR & I2C_ISR_RXNE)) {
-			if (I2C2->ISR & I2C_ISR_NACKF) {
-				GPIOC->ODR |= (1 << 6);
-				break;
-			}
-		}
-		
-		while(!(I2C2->ISR & I2C_ISR_TC)) {
-		}
-		
-		highVal = I2C2->RXDR;
-		
-		xVal = (highVal << 8) | lowVal;
-		
-		if (xVal > 0) {
-			GPIOC->ODR |= (1 << 9);
-		}
-		if (xVal < 0) {
-			GPIOC->ODR |= (1 << 8);
-		}
-		// Slave address is 0x6B (Gyro), number of bytes to transmit is 2, read operation, start bit set
-	// Sending enable bits for x and y axes to gyroscope
-	/*I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-	I2C2->CR2 |= (1 << 17) | (0x6B << 1); 
-	I2C2->CR2 |= (1 << 10);
-	I2C2->CR2 |= (1 << 13);*/
-	
-	/*I2C2->CR2 |= (1 << 5);
-	I2C2->CR2 &= ~((1 << 4) | (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0));
-	
-	I2C2->CR2 |= (1 << 16);
-	I2C2->CR2 &= ~(1 << 10);
-	I2C2->CR2 |= (1 << 13);*/
-
-	
-	while(1) {
-		if (I2C2->ISR & (1 << 4)) {
-			//red
-			GPIOC->ODR |= (1 << 6);
-			HAL_Delay(100);
-			break;
-		}
-		if (I2C2->ISR & (1 << 1)) {
-			//orange
-			GPIOC->ODR |= (1 << 8);
-			break;
-		}
-	}
-	
-		I2C2->TXDR = (0xA8 << 0);
-
-		while(!(I2C2->ISR & I2C_ISR_TC)) {
-		}
-	
-		//xVal = I2C2->RXDR;
-	
-		I2C2->CR2 |= (1 << 14);
-		
-		// Slave address is 0xA8 (OUT_X_L and H), number of bytes to transmit is 2, read operation, start bit set
-		// Retrieving x axis data from gyroscope
-		I2C2->CR2 |= (1 << 5) | (1 << 3) | (1 << 7) | (1 << 1);
-		I2C2->CR2 &= ~((1 << 6) | (1 << 4) | (1 << 2) | (1 << 0));
-	
-		I2C2->CR2 |= (1 << 17);
-		I2C2->CR2 |= (1 << 10);
-		I2C2->CR2 |= (1 << 13);
-		
-		while(!(I2C2->ISR & I2C_ISR_RXNE)) {
-			if (I2C2->ISR & I2C_ISR_NACKF) {
-				//GPIOC->ODR |= (1 << 6);
-				break;
-			}
-		}
-		while(!(I2C2->ISR & I2C_ISR_TC)) {
-		}
-
-		yVal = I2C2->RXDR;
-	
-		I2C2->CR2 |= (1 << 14);
-		
-		if (yVal > 10) {
-			GPIOC->ODR |= (1 << 6);
-			GPIOC->ODR &= ~(1 << 8);
-		}
-		else if (yVal < -10) {
-			GPIOC->ODR |= (1 << 8);
-			GPIOC->ODR &= ~(1 << 6);
-		}
-		if (xVal > 10) {
-			GPIOC->ODR |= (1 << 7);
-			GPIOC->ODR &= ~(1 << 9);
-		}
-		else if (xVal < -10) {
-			GPIOC->ODR |= (1 << 9);
-			GPIOC->ODR &= ~(1 << 7);
-		}
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
@@ -458,14 +175,17 @@ void initializeI2C(){
 	I2C2->TIMINGR |= (1 << 28) | (0xF << 8) | (0x13 << 0) | (0x2 << 16) | (0x4 << 20);
 	
 	// Enable the peripheral
-	I2C2->CR1 |= (1 << 1) | (1 << 0) | (1 << 4) | (1 << 6) | (1 << 7);
+	I2C2->CR1 |= (1 << 0);
+	//| (1 << 0) | (1 << 4) | (1 << 6) | (1 << 7);
 }
 
 void initializeUART(){
-	GPIOB->MODER |= (1 << 21) | (1 << 23);
-	GPIOB->MODER &= ~((1 << 22) | (1 << 20));
-	GPIOB->AFR[1] |= (1 << 10) | (1 << 14);
-	GPIOB->AFR[1] &= ~((1 << 8) | (1 << 9) | (1 << 11) | (1 << 12) | (1 << 13) | (1 << 15));
+	GPIOB->MODER |= (1 << 9) | (1 << 11);
+	GPIOB->MODER &= ~((1 << 8) | (1 << 10));
+	
+	
+	GPIOB->AFR[0] |= (1 << 18) | (1 << 22);
+	GPIOB->AFR[0] &= ~((1 << 23) | (1 << 21) | (1 << 20) | (1 << 19) | (1 << 17) | (1 << 16));
 		
 	uint32_t freq = HAL_RCC_GetHCLKFreq();
 	USART3->BRR |= (freq / 115200);
@@ -477,9 +197,10 @@ void initializeHeartRateChip(){
 	// Initialize chip to heart rate mode
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0xAE << 1));
+    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
     I2C2->CR2 |= (1 << 13);
+
    	 
     // Should be breaking when TXIS is set
     while (1) {
@@ -491,40 +212,42 @@ void initializeHeartRateChip(){
    		 break;
    	 }
     }
+		
+		//GPIOC->ODR ^= (1 << 6);
     
 		// Setting it to heart rate mode
-		GPIOC->ODR |= (1 << 6);
     I2C2->TXDR = 0x09;
 		
     while (1) {
-			GPIOC->ODR |= (1 << 9);
    	 if (I2C2->ISR & (1 << 4)) {
    			 GPIOC->ODR ^= (1 << 6);
 				 HAL_Delay(100);
    	 }
    	 if (I2C2->ISR & (1 << 1)) {
-			 GPIOC->ODR |= (1 << 8);
    		 break;
    	 }
     }
 		
-		// Set PPG Ready Enable bit
+		//GPIOC->ODR |= (1 << 7);
 		// 010 is heart rate mode
-		GPIOC->ODR |= (1 << 7);
     I2C2->TXDR = (0x02 << 0);
     
     while(!(I2C2->ISR & (1 << 6))) {
     }
     
-		GPIOC->ODR |= (1 << 8);
+		//GPIOC->ODR |= (1 << 8);
     I2C2->CR2 |= (1 << 14);
 
+	// Set PPG Ready Enable bit
 	// Set FIFO average register to reduce errors
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0xAE << 1));
+    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
     I2C2->CR2 |= (1 << 13);
+		
+		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8));
+		//GPIOC->ODR |= (1 << 9);
    	 
     // Should be breaking when TXIS is set
     while (1) {
@@ -536,39 +259,44 @@ void initializeHeartRateChip(){
    		 break;
    	 }
     }
+		
+		//GPIOC->ODR |= (1 << 6);
     
 		// Address where FIFO average is
-		GPIOC->ODR |= (1 << 6);
     I2C2->TXDR = 0x08;
 		
     while (1) {
-			GPIOC->ODR |= (1 << 9);
    	 if (I2C2->ISR & (1 << 4)) {
    			 GPIOC->ODR ^= (1 << 6);
 				 HAL_Delay(100);
    	 }
    	 if (I2C2->ISR & (1 << 1)) {
-			 GPIOC->ODR |= (1 << 8);
    		 break;
    	 }
     }
 		
+		//GPIOC->ODR |= (1 << 7);
+		
 		// Set bits for averaging samples
-		GPIOC->ODR |= (1 << 7);
+		//GPIOC->ODR |= (1 << 7);
     I2C2->TXDR = (0xE0 << 0);
     
     while(!(I2C2->ISR & (1 << 6))) {
     }
     
-		GPIOC->ODR |= (1 << 8);
+		//GPIOC->ODR |= (1 << 8);
     I2C2->CR2 |= (1 << 14);
+		
+		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //| (1 << 9));
 		
 	// Set PPG Ready Enable bit
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0xAE << 1));
+    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
     I2C2->CR2 |= (1 << 13);
+		
+		//GPIOC->ODR |= (1 << 6);
    	 
     // Should be breaking when TXIS is set
     while (1) {
@@ -582,31 +310,31 @@ void initializeHeartRateChip(){
     }
     
 		// Address where PPG ready enable is
-		GPIOC->ODR |= (1 << 6);
+		//GPIOC->ODR |= (1 << 7);
     I2C2->TXDR = 0x02;
 		
     while (1) {
-			GPIOC->ODR |= (1 << 9);
    	 if (I2C2->ISR & (1 << 4)) {
    			 GPIOC->ODR ^= (1 << 6);
 				 HAL_Delay(100);
    	 }
    	 if (I2C2->ISR & (1 << 1)) {
-			 GPIOC->ODR |= (1 << 8);
    		 break;
    	 }
     }
 		
 		// Set PPG Ready Enable bit
 		// 010 is heart rate mode
-		GPIOC->ODR |= (1 << 7);
+		//GPIOC->ODR |= (1 << 8);
     I2C2->TXDR = (0x40 << 0);
     
     while(!(I2C2->ISR & (1 << 6))) {
     }
     
-		GPIOC->ODR |= (1 << 8);
+		//GPIOC->ODR |= (1 << 9);
     I2C2->CR2 |= (1 << 14);
+		
+		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8) );//| (1 << 9));
 }
 
 
@@ -624,16 +352,17 @@ void setUpTimer(){
 }
 
 void setUpInterrupts(){
-	GPIOB->MODER &= ~((1 << 1) | (1 << 2));
-	GPIOB->OSPEEDR |= (1 << 1);
-	GPIOB->PUPDR &= ~((1 << 0) | (1 << 1));
+	GPIOB->MODER &= ~((1 << 19) | (1 << 18));
+	GPIOB->OSPEEDR |= (1 << 19);
+	GPIOB->PUPDR &= ~(1 << 18); 
+	GPIOB->PUPDR |= (1 << 19);
 	
-	EXTI->IMR |= (1 << 0);
-	EXTI->FTSR |= (1 << 0);
-	SYSCFG->EXTICR[0] |= (1 << 0);
+	EXTI->IMR |= (1 << 9);
+	EXTI->FTSR |= (1 << 9);
+	SYSCFG->EXTICR[2] |= (1 << 4);
 	
-	NVIC_EnableIRQ(EXTI0_1_IRQn);
-	NVIC_SetPriority(EXTI0_1_IRQn, 2);
+	NVIC_EnableIRQ(EXTI4_15_IRQn);
+	NVIC_SetPriority(EXTI4_15_IRQn, 2);
 }
 
 void transmitChar(char c){
@@ -655,9 +384,67 @@ void transmitString (char c[]){
 
 // This is the PPG interrupt from the heart rate chip
 // PB0 is interrupt
-void EXTI0_1_IRQHandler() {
-	EXTI->PR |= (1 << 0);
+void EXTI4_15_IRQHandler() {
 	
+		counter += 1;
+		if(counter > 1){
+			GPIOC->ODR |= (1 << 9);
+		}
+			// Attempting to read the interrupt
+		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+    I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
+    I2C2->CR2 &= ~(1 << 10);
+    I2C2->CR2 |= (1 << 13);
+		
+		//GPIOC->ODR |= (1 << 6);
+   	 
+    // Should be breaking when TXIS is set
+    while (1) {
+   	 if (I2C2->ISR & (1 << 4)) {
+   			 GPIOC->ODR ^= (1 << 6);
+				 HAL_Delay(100);
+   	 }
+   	 if (I2C2->ISR & (1 << 1)) {
+   		 break;
+   	 }
+    }
+		
+		// Address where PPG ready enable is
+		//GPIOC->ODR |= (1 << 7);
+    I2C2->TXDR = (0x00 << 0);
+    
+    while(!(I2C2->ISR & (1 << 6))) {
+    }
+    
+		//GPIOC->ODR |= (1 << 8);
+    I2C2->CR2 |= (1 << 14);
+		
+		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+    I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
+    I2C2->CR2 |= (1 << 10);
+    I2C2->CR2 |= (1 << 13);
+		
+		 while (1) {
+   	 if (I2C2->ISR & (1 << 4)) {
+   			 GPIOC->ODR ^= (1 << 6);
+				 HAL_Delay(100);
+   	 }
+   	 if (I2C2->ISR & (1 << 2)) {
+   		 break;
+   	 }
+    }
+		
+		//GPIOC->ODR &= ~(1 << 9);
+		int test = I2C2->RXDR; 
+	
+		if(test & (1 << 0)){
+			GPIOC->ODR |= (1 << 6);
+			return;
+		}
+		else{
+			GPIOC->ODR &= ~(1 << 6);
+		}
+			
 	/* 
 Reading data register:
 	Set up device for write mode
@@ -673,20 +460,30 @@ Reading data register:
 	Set OVF counter register to 0
 	Set FIFO read pointer register to 0
 */
+	
 	restartWriteCondition(1);
 	waitForTxis();
 	I2C2->TXDR = 0x07;
 	waitForTC();
-	restartReadCondition(3);
+	restartReadCondition(4);
 	WaitForRXNEorNACKF();
 	uint32_t sample = I2C2->RXDR;
 	WaitForRXNEorNACKF();
 	sample = (sample << 8) | I2C2->RXDR;
 	WaitForRXNEorNACKF();
-	sample = (sample << 16) | I2C2->RXDR;
+	sample = (sample << 8) | I2C2->RXDR;
+	WaitForRXNEorNACKF();
+	sample = (sample << 8) | I2C2->RXDR;
 	waitForTC();
 	_sample = sample;
 	
+	//if(_sample > 150){
+		//GPIOC->ODR ^= (1 << 7);
+	//}
+	
+	//if(_sample > 2000){
+		//GPIOC->ODR ^= (1 << 8);
+	//}
 	// Reset pointers
 	restartWriteCondition(2);
 	waitForTxis();
@@ -708,21 +505,30 @@ Reading data register:
 	waitForTxis();
 	I2C2->TXDR = 0x00;
 	waitForTC();
+	
+	//GPIOC->ODR |= (1 << 8);
+	
+	EXTI->PR |= (1 << 9);
+	if(counter > 1){
+		
+	GPIOC->ODR |= (1 << 7);
+	}
+	
 }
 
 void restartWriteCondition(uint16_t numBytes) {
-	// Slave address is 0xAE, number of bytes to transmit is numBytes, write operation, start bit set
+	// Slave address is 0x57, number of bytes to transmit is numBytes, write operation, start bit set
 	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-  I2C2->CR2 |= ((numBytes << 16) | (0xAE << 1));
+  I2C2->CR2 |= ((numBytes << 16) | (0x57 << 1));
   I2C2->CR2 &= ~(1 << 10);
   I2C2->CR2 |= (1 << 13);
 }
 
 void restartReadCondition(uint16_t numBytes) {
-		// Slave address is 0xAF, number of bytes to transmit is numBytes, read operation, start bit set
+		// Slave address is 0x57, number of bytes to transmit is numBytes, read operation, start bit set
 	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-  I2C2->CR2 |= ((numBytes << 16) | (0xAF << 1));
-  I2C2->CR2 &= ~(1 << 10);
+  I2C2->CR2 |= ((numBytes << 16) | (0x57 << 1));
+  I2C2->CR2 |= (1 << 10);
   I2C2->CR2 |= (1 << 13);
 }
 
