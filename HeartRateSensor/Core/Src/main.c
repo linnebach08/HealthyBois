@@ -88,10 +88,10 @@ int main(void)
   /* USER CODE BEGIN Init */
 	initializeClocks();
 	initializeLEDs();
-	initializeI2C();
-	//initializeUART();
-	initializeHeartRateChip();
-	setUpInterrupts();
+	//initializeI2C();
+	initializeUART();
+	//initializeHeartRateChip();
+	//setUpInterrupts();
 	//setUpTimer();
   /* USER CODE END Init */
 
@@ -100,7 +100,9 @@ int main(void)
 	
   while (1)
   {
-	
+		HAL_Delay(100);
+		GPIOC->ODR ^= (1 << 6);
+		transmitString("Test\r\n");
   }
   /* USER CODE END 3 */
 }
@@ -180,12 +182,12 @@ void initializeI2C(){
 }
 
 void initializeUART(){
-	GPIOB->MODER |= (1 << 9) | (1 << 11);
-	GPIOB->MODER &= ~((1 << 8) | (1 << 10));
+	GPIOC->MODER |= (1 << 9) | (1 << 11);
+	GPIOC->MODER &= ~((1 << 8) | (1 << 10));
 	
 	
-	GPIOB->AFR[0] |= (1 << 18) | (1 << 22);
-	GPIOB->AFR[0] &= ~((1 << 23) | (1 << 21) | (1 << 20) | (1 << 19) | (1 << 17) | (1 << 16));
+	GPIOC->AFR[0] |= (1 << 18) | (1 << 22);
+	GPIOC->AFR[0] &= ~((1 << 23) | (1 << 21) | (1 << 20) | (1 << 19) | (1 << 17) | (1 << 16));
 		
 	uint32_t freq = HAL_RCC_GetHCLKFreq();
 	USART3->BRR |= (freq / 115200);
@@ -386,11 +388,11 @@ void transmitString (char c[]){
 // PB0 is interrupt
 void EXTI4_15_IRQHandler() {
 	
-		counter += 1;
+		counter = counter + 1;                                 
 		if(counter > 1){
 			GPIOC->ODR |= (1 << 9);
 		}
-			// Attempting to read the interrupt
+		/*	// Attempting to read the interrupt
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
     I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
@@ -443,7 +445,7 @@ void EXTI4_15_IRQHandler() {
 		}
 		else{
 			GPIOC->ODR &= ~(1 << 6);
-		}
+		}*/
 			
 	/* 
 Reading data register:
@@ -465,17 +467,14 @@ Reading data register:
 	waitForTxis();
 	I2C2->TXDR = 0x07;
 	waitForTC();
-	restartReadCondition(4);
+	restartReadCondition(2);
 	WaitForRXNEorNACKF();
 	uint32_t sample = I2C2->RXDR;
 	WaitForRXNEorNACKF();
 	sample = (sample << 8) | I2C2->RXDR;
-	WaitForRXNEorNACKF();
-	sample = (sample << 8) | I2C2->RXDR;
-	WaitForRXNEorNACKF();
-	sample = (sample << 8) | I2C2->RXDR;
 	waitForTC();
 	_sample = sample;
+	
 	
 	//if(_sample > 150){
 		//GPIOC->ODR ^= (1 << 7);
