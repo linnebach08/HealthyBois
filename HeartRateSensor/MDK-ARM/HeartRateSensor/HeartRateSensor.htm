@@ -3,7 +3,7 @@
 <title>Static Call Graph - [HeartRateSensor\HeartRateSensor.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image HeartRateSensor\HeartRateSensor.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Mon May 03 02:57:48 2021
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Mon May 03 13:27:09 2021
 <BR><P>
 <H3>Maximum Stack Usage =        208 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -265,8 +265,8 @@ Global Symbols
 
 <P><STRONG><a name="[67]"></a>__scatterload_rt2</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, init.o(.text), UNUSED)
 
-<P><STRONG><a name="[d]"></a>EXTI4_15_IRQHandler</STRONG> (Thumb, 122 bytes, Stack size 16 bytes, main.o(i.EXTI4_15_IRQHandler))
-<BR><BR>[Stack]<UL><LI>Max Depth = 48<LI>Call Chain = EXTI4_15_IRQHandler &rArr; waitForTxis &rArr; HAL_Delay
+<P><STRONG><a name="[d]"></a>EXTI4_15_IRQHandler</STRONG> (Thumb, 108 bytes, Stack size 8 bytes, main.o(i.EXTI4_15_IRQHandler))
+<BR><BR>[Stack]<UL><LI>Max Depth = 40<LI>Call Chain = EXTI4_15_IRQHandler &rArr; waitForTxis &rArr; HAL_Delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[37]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;waitForTxis
 <LI><a href="#[38]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;waitForTC
@@ -409,7 +409,7 @@ Global Symbols
 <P><STRONG><a name="[27]"></a>SystemInit</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, system_stm32f0xx.o(i.SystemInit))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f072xb.o(.text)
 </UL>
-<P><STRONG><a name="[15]"></a>TIM2_IRQHandler</STRONG> (Thumb, 36 bytes, Stack size 8 bytes, main.o(i.TIM2_IRQHandler))
+<P><STRONG><a name="[15]"></a>TIM2_IRQHandler</STRONG> (Thumb, 24 bytes, Stack size 8 bytes, main.o(i.TIM2_IRQHandler))
 <BR><BR>[Stack]<UL><LI>Max Depth = 60<LI>Call Chain = TIM2_IRQHandler &rArr; printSample &rArr; __aeabi_idivmod &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printSample
@@ -492,7 +492,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[3d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_Init
 <LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpTimer
-<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupts
+<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupt
 <LI><a href="#[4f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initializeUART
 <LI><a href="#[52]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initializeLEDs
 <LI><a href="#[53]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initializeI2C
@@ -504,7 +504,7 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> entry9a.o(.ARM.Collect$$$$0000000B)
 </UL>
-<P><STRONG><a name="[4a]"></a>printSample</STRONG> (Thumb, 116 bytes, Stack size 24 bytes, main.o(i.printSample))
+<P><STRONG><a name="[4a]"></a>printSample</STRONG> (Thumb, 114 bytes, Stack size 24 bytes, main.o(i.printSample))
 <BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = printSample &rArr; __aeabi_idivmod &rArr; __aeabi_uidivmod
 </UL>
 <BR>[Calls]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmitString
@@ -524,8 +524,8 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EXTI4_15_IRQHandler
 </UL>
 
-<P><STRONG><a name="[55]"></a>setUpInterrupts</STRONG> (Thumb, 78 bytes, Stack size 8 bytes, main.o(i.setUpInterrupts))
-<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = setUpInterrupts
+<P><STRONG><a name="[55]"></a>setUpInterrupt</STRONG> (Thumb, 78 bytes, Stack size 8 bytes, main.o(i.setUpInterrupt))
+<BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = setUpInterrupt
 </UL>
 <BR>[Calls]<UL><LI><a href="#[4d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__NVIC_SetPriority
 <LI><a href="#[4c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__NVIC_EnableIRQ
@@ -542,12 +542,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[26]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[59]"></a>transmitChar</STRONG> (Thumb, 26 bytes, Stack size 0 bytes, main.o(i.transmitChar))
+<P><STRONG><a name="[59]"></a>transmitChar</STRONG> (Thumb, 16 bytes, Stack size 0 bytes, main.o(i.transmitChar))
 <BR><BR>[Called By]<UL><LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmitString
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;printSample
 </UL>
 
-<P><STRONG><a name="[57]"></a>transmitString</STRONG> (Thumb, 34 bytes, Stack size 8 bytes, main.o(i.transmitString))
+<P><STRONG><a name="[57]"></a>transmitString</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, main.o(i.transmitString))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = transmitString
 </UL>
 <BR>[Calls]<UL><LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;transmitChar
@@ -572,13 +572,13 @@ Local Symbols
 </H3>
 <P><STRONG><a name="[4c]"></a>__NVIC_EnableIRQ</STRONG> (Thumb, 18 bytes, Stack size 0 bytes, main.o(i.__NVIC_EnableIRQ))
 <BR><BR>[Called By]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpTimer
-<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupts
+<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupt
 <LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initializeBlinkingTimer
 </UL>
 
 <P><STRONG><a name="[4d]"></a>__NVIC_SetPriority</STRONG> (Thumb, 60 bytes, Stack size 0 bytes, main.o(i.__NVIC_SetPriority))
 <BR><BR>[Called By]<UL><LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpTimer
-<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupts
+<LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;setUpInterrupt
 <LI><a href="#[4b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;initializeBlinkingTimer
 </UL>
 
