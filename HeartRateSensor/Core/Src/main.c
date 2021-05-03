@@ -91,14 +91,23 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+	//transmitString("initializing Clocks\r\n");
 	initializeClocks();
+	//transmitString("initializing LEDs\r\n");
 	initializeLEDs();
+	//transmitString("initializing I2C\r\n");
 	initializeI2C();
+	//transmitString("initializing UART\r\n");
 	initializeUART();
+	//transmitString("initializing Chip\r\n");
 	initializeHeartRateChip();
+	//transmitString("initializing DAC\r\n");
 	initializeDAC();
+	//transmitString("initializing interrupts\r\n");
 	setUpInterrupts();
+	//transmitString("initializing Timer UART\r\n");
 	setUpTimer();
+	//transmitString("initializing Timer LED\r\n");
 	initializeBlinkingTimer();
   /* USER CODE END Init */
 
@@ -201,14 +210,16 @@ void initializeUART(){
 }
 
 void initializeHeartRateChip(){
+		//transmitString("Setting Heart Rate Mode\r\n");
 	// Initialize chip to heart rate mode
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
     I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
     I2C2->CR2 |= (1 << 13);
+	
+	//GPIOC->ODR |= (1 << 8);
 
-   	 
     // Should be breaking when TXIS is set
     while (1) {
    	 if (I2C2->ISR & (1 << 4)) {
@@ -219,6 +230,8 @@ void initializeHeartRateChip(){
    		 break;
    	 }
     }
+		
+		
 		
 		//GPIOC->ODR ^= (1 << 6);
     
@@ -235,6 +248,8 @@ void initializeHeartRateChip(){
    	 }
     }
 		
+		
+		
 		//GPIOC->ODR |= (1 << 7);
 		// 010 is heart rate mode
     I2C2->TXDR = (0x02 << 0);
@@ -245,6 +260,7 @@ void initializeHeartRateChip(){
 		//GPIOC->ODR |= (1 << 8);
     I2C2->CR2 |= (1 << 14);
 
+		//	transmitString("Setting Sample Averaging Enable\r\n");
 	// Set PPG Ready Enable bit
 	// Set FIFO average register to reduce errors
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
@@ -252,6 +268,8 @@ void initializeHeartRateChip(){
     I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
     I2C2->CR2 |= (1 << 13);
+		
+		
 		
 		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8));
 		//GPIOC->ODR |= (1 << 9);
@@ -297,6 +315,7 @@ void initializeHeartRateChip(){
 		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //| (1 << 9));
 		
 		
+		//	transmitString("Setting PPG Enalbe\r\n");
 	// Set PPG Ready Enable bit
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
@@ -344,6 +363,7 @@ void initializeHeartRateChip(){
 		
 		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8) );//| (1 << 9));
 		
+		//	transmitString("Reading\r\n");
 		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
     I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
     I2C2->CR2 &= ~(1 << 10);
@@ -506,9 +526,6 @@ Reading data register:
 	sample = (sample << 8) | I2C2->RXDR;
 	waitForTC();
 	if(sample > 150){
-		_sample = 0;
-	}
-	else if(sample < 40){
 		_sample = 0;
 	}
 	else{
