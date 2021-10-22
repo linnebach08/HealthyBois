@@ -42,25 +42,31 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+// Forward Declarations
 void transmitChar (char c);
 void transmitString (char c[]);
 void initializeClocks (void);
 void initializeLEDs (void);
 void initializeUART (void);
 void initializeHeartRateChip (void);
-void setUpInterrupts (void);
+void setUpInterrupt (void);
 void initializeI2C (void);
+void initializeDAC (void);
+void initializeBlinkingTimer (void);
 void setUpTimer (void);
 void EXTI4_15_IRQHandler(void);
 void TIM2_IRQHandler(void);
+void TIM3_IRQHandler(void);
 void restartWriteCondition(uint16_t);
 void restartReadCondition(uint16_t);
 void waitForTxis(void);
 void waitForTC(void);
 void WaitForRXNEorNACKF(void);
+void printSample(uint32_t sample);
 volatile uint32_t _sample;
 volatile uint32_t counter = 0;
-volatile uint32_t triggered = 0;
+volatile uint32_t firstCheck = 1;
 
 
 
@@ -87,41 +93,22 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+	// Initialize the entire system
 	initializeClocks();
 	initializeLEDs();
-	//initializeI2C();
+	initializeI2C();
 	initializeUART();
-	//initializeHeartRateChip();
-	//setUpInterrupts();
+	initializeHeartRateChip();
+	initializeDAC();
+	setUpInterrupt();
 	setUpTimer();
-  /* USER CODE END Init */
+	initializeBlinkingTimer();
 
   /* Configure the system clock */
   SystemClock_Config();
-	uint32_t tests1[10] = {50, 75, 65, 80, 110, 95, 60, 80, 55, 100};
-
-	uint32_t index = 0;
 	
   while (1)
   {
-		if (triggered == 1) {
-			triggered = 0;
-			TIM2->CR1 &= ~(1 << 0);
-			TIM2->PSC = 7999;
-			TIM2->ARR = 60000 / tests1[index];
-			TIM2->DIER |= (1 << 0);
-			TIM2->CR1 |= (1 << 0);
-			GPIOC->ODR ^= (1 << 8);
-			index++;
-			if (index > 9) {
-				index = 0;
-			}
-		}
-		
-
-		//HAL_Delay(100);
-		//GPIOC->ODR ^= (1 << 6);
-		//transmitString("Test\r\n");
   }
   /* USER CODE END 3 */
 }
@@ -161,17 +148,18 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void initializeClocks(){
-	/* USER CODE BEGIN SysInit */
+void initializeClocks(){	
+	// Enable all clocks required by the system
 	RCC->AHBENR |= (1 << 19) | (1 << 18);
 	RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
 	RCC->APB1ENR |=  RCC_APB1ENR_USART3EN;
 	RCC->APB2ENR |= (1 << 0);
 	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN;
+	RCC->APB1ENR |= RCC_APB1ENR_DACEN;
 }
 
 void initializeLEDs(){
-		// LED initialization
+	// LED initialization code setting up PC6, PC7, PC8 and PC9
 	GPIOC->MODER |= (1 << 12) | (1 << 14) | (1 << 16) | (1 << 18);
   GPIOC->OTYPER |= (0 << 6) | (0 << 7) | (0 << 8) | (0 << 9);
   GPIOC->OSPEEDR |= (1 << 13) | (1 << 15) | (1 << 17) | (1 << 19);
@@ -182,7 +170,6 @@ void initializeI2C(){
 	// PB11 and PB13 and PB14
 	GPIOB->MODER |= (1 << 23) | (1 << 27) | (1 << 28);
 	GPIOB->OTYPER |= (1 << 11) | (1 << 13);
-	//GPIOB->OTYPER &= ~(1 << 14);
 	GPIOB->AFR[1] |= (1 << 12) | (1 << 22) | (1 << 20);
 	GPIOB->ODR |= (1 << 14);
 	GPIOB->PUPDR |= (1 << 22) | (1 << 26);
@@ -197,7 +184,6 @@ void initializeI2C(){
 	
 	// Enable the peripheral
 	I2C2->CR1 |= (1 << 0);
-	//| (1 << 0) | (1 << 4) | (1 << 6) | (1 << 7);
 }
 
 void initializeUART(){
@@ -205,8 +191,8 @@ void initializeUART(){
 	GPIOC->MODER &= ~((1 << 8) | (1 << 10));
 	
 	
-	GPIOC->AFR[0] |= (1 << 18) | (1 << 22);
-	GPIOC->AFR[0] &= ~((1 << 23) | (1 << 21) | (1 << 20) | (1 << 19) | (1 << 17) | (1 << 16));
+	GPIOC->AFR[0] |= (1 << 16) | (1 << 20);
+	GPIOC->AFR[0] &= ~((1 << 23) | (1 << 21) | (1 << 22) | (1 << 19) | (1 << 17) | (1 << 18));
 		
 	uint32_t freq = HAL_RCC_GetHCLKFreq();
 	USART3->BRR |= (freq / 115200);
@@ -217,152 +203,184 @@ void initializeUART(){
 void initializeHeartRateChip(){
 	// Initialize chip to heart rate mode
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
-    I2C2->CR2 &= ~(1 << 10);
-    I2C2->CR2 |= (1 << 13);
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+  I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
+  I2C2->CR2 &= ~(1 << 10);
+  I2C2->CR2 |= (1 << 13);
 
-   	 
-    // Should be breaking when TXIS is set
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
-		
-		//GPIOC->ODR ^= (1 << 6);
+  // Should break when TXIS is set
+  while (1) {
+		if (I2C2->ISR & (1 << 4)) {
+			GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+		}
+		if (I2C2->ISR & (1 << 1)) {
+			break;
+		}
+  }
     
-		// Setting it to heart rate mode
-    I2C2->TXDR = 0x09;
+	// Address to modify to set it to heart rate mode
+  I2C2->TXDR = 0x09;
 		
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
+	// Break when TXIS is set
+  while (1) {
+		if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+		}
+		if (I2C2->ISR & (1 << 1)) {
+			break;
+		}
+  }
 		
-		//GPIOC->ODR |= (1 << 7);
-		// 010 is heart rate mode
-    I2C2->TXDR = (0x02 << 0);
+	// Write 010 to set it to heart rate mode
+  I2C2->TXDR = (0x02 << 0);
     
-    while(!(I2C2->ISR & (1 << 6))) {
-    }
+  while(!(I2C2->ISR & (1 << 6))) {
+  }
     
-		//GPIOC->ODR |= (1 << 8);
-    I2C2->CR2 |= (1 << 14);
+	// Send the stop signal
+  I2C2->CR2 |= (1 << 14);
 
-	// Set PPG Ready Enable bit
-	// Set FIFO average register to reduce errors
+	// Set FIFO average register to reduce errors and fluctuation in heart rate readings
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
-    I2C2->CR2 &= ~(1 << 10);
-    I2C2->CR2 |= (1 << 13);
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+  I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
+  I2C2->CR2 &= ~(1 << 10);
+  I2C2->CR2 |= (1 << 13);
 		
-		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8));
-		//GPIOC->ODR |= (1 << 9);
-   	 
-    // Should be breaking when TXIS is set
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
-		
-		//GPIOC->ODR |= (1 << 6);
+  // Break When TXIS is set
+  while (1) {
+   	if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+   	}
+   	if (I2C2->ISR & (1 << 1)) {
+   		break;
+   	}
+  }
     
-		// Address where FIFO average is
-    I2C2->TXDR = 0x08;
+	// Address where FIFO average is
+  I2C2->TXDR = 0x08;
 		
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
-		
-		//GPIOC->ODR |= (1 << 7);
-		
-		// Set bits for averaging samples
-		//GPIOC->ODR |= (1 << 7);
-    I2C2->TXDR = (0xE0 << 0);
+  while (1) {
+    if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+   	}
+   	if (I2C2->ISR & (1 << 1)) {
+   		break;
+   	}
+  }
+	
+	// Set bits for averaging 32 samples per reading
+  I2C2->TXDR = (0xE0 << 0);
     
-    while(!(I2C2->ISR & (1 << 6))) {
-    }
-    
-		//GPIOC->ODR |= (1 << 8);
-    I2C2->CR2 |= (1 << 14);
-		
-		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8)); //| (1 << 9));
-		
+  while(!(I2C2->ISR & (1 << 6))) {
+  }
+	
+	// Send the stop signal
+  I2C2->CR2 |= (1 << 14);
+			
 	// Set PPG Ready Enable bit
 	// Slave address is 0xBE, number of bytes to transmit is 2, write operation, start bit set
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
-    I2C2->CR2 &= ~(1 << 10);
-    I2C2->CR2 |= (1 << 13);
-		
-		//GPIOC->ODR |= (1 << 6);
-   	 
-    // Should be breaking when TXIS is set
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+  I2C2->CR2 |= ((2 << 16) | (0x57 << 1));
+  I2C2->CR2 &= ~(1 << 10);
+  I2C2->CR2 |= (1 << 13);
+	
+  // Break when TXIS is set
+  while (1) {
+    if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+   	}
+   	if (I2C2->ISR & (1 << 1)) {
+			break;
+   	}
+  }
     
-		// Address where PPG ready enable is
-		//GPIOC->ODR |= (1 << 7);
-    I2C2->TXDR = 0x02;
+	// Address where PPG ready enable is
+  I2C2->TXDR = 0x02;
 		
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
+  while (1) {
+		if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+		}
+		if (I2C2->ISR & (1 << 1)) {
+			break;
+		}
+  }
 		
-		// Set PPG Ready Enable bit
-		// 010 is heart rate mode
-		//GPIOC->ODR |= (1 << 8);
-    I2C2->TXDR = (0x40 << 0);
+	// Set PPG Ready Enable bit
+  I2C2->TXDR = (0x40 << 0);
     
-    while(!(I2C2->ISR & (1 << 6))) {
-    }
-    
-		//GPIOC->ODR |= (1 << 9);
-    I2C2->CR2 |= (1 << 14);
+  while(!(I2C2->ISR & (1 << 6))) {
+  }
+   
+	// Send the stop signal
+  I2C2->CR2 |= (1 << 14);
+	
+	// Read the interupt status register to acknowledge the PWR_RDY interupt
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+  I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
+  I2C2->CR2 &= ~(1 << 10);
+  I2C2->CR2 |= (1 << 13);
+	
+  // Should be breaking when TXIS is set
+  while (1) {
+		if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+   	}
+   	if (I2C2->ISR & (1 << 1)) {
+   		break;
+   	}
+  }
 		
-		//GPIOC->ODR &= ~((1 << 6) | (1 << 7) | (1 << 8) );//| (1 << 9));
+	// Address of the interrupt status register
+  I2C2->TXDR = (0x00 << 0);
+    
+  while(!(I2C2->ISR & (1 << 6))) {
+  }
+    
+	// Stop the Write and now begin reading
+  I2C2->CR2 |= (1 << 14);
+		
+	// Set up reading the register
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+  I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
+  I2C2->CR2 |= (1 << 10);
+  I2C2->CR2 |= (1 << 13);
+		
+
+	while (1) {
+   	if (I2C2->ISR & (1 << 4)) {
+   		GPIOC->ODR ^= (1 << 6);
+			HAL_Delay(100);
+   	}
+   	if (I2C2->ISR & (1 << 2)) {
+   		break;
+   	}
+  }
+	
+	// Read the register thus acknowledging the status
+	int interuptStatus = I2C2->RXDR; 
 }
 
-
+void initializeDAC(){
+		// Set up PA4 for DAC output
+    GPIOA->MODER |= (1 << 8) | (1 << 9);
+    GPIOA->PUPDR &= 0;
+    
+    DAC->CR |= (1 << 2);
+    DAC->CR |= (1 << 5) | (1 << 4) | (1 << 3);
+    DAC->CR |= (1 << 0);
+}
 
 void setUpTimer(){
-	// Set up timer to go off every so often
-	// Refer to lab 3. Possibly Nathan's code if it is better commented
+	// Set up timer to go off every 3 seconds
 	TIM2->PSC = 7999;
 	TIM2->ARR = 2000;
 	TIM2->DIER |= (1 << 0);
@@ -372,7 +390,8 @@ void setUpTimer(){
 	NVIC_SetPriority(TIM2_IRQn, 3);
 }
 
-void setUpInterrupts(){
+void setUpInterrupt(){
+	// Set up PB9 as an external interupt which is coming from our embedded system board
 	GPIOB->MODER &= ~((1 << 19) | (1 << 18));
 	GPIOB->OSPEEDR |= (1 << 19);
 	GPIOB->PUPDR &= ~(1 << 18); 
@@ -384,10 +403,25 @@ void setUpInterrupts(){
 	
 	NVIC_EnableIRQ(EXTI4_15_IRQn);
 	NVIC_SetPriority(EXTI4_15_IRQn, 2);
+	
+
+}
+
+void initializeBlinkingTimer(){
+		// Initialize the timer which will be dynamically changed to blink an LED at the rate of the heart rate
+		TIM3->CR1 &= ~(1 << 0);
+		TIM3->PSC = 7999;
+		TIM3->ARR = 500;
+		TIM3->DIER |= (1 << 0);
+		TIM3->CR1 |= (1 << 0);
+	
+		NVIC_EnableIRQ(TIM3_IRQn);
+		NVIC_SetPriority(TIM3_IRQn, 3);
 }
 
 void transmitChar(char c){
-		while(1) {
+	// Transmit the given character
+	while(1) {
 		if (USART3->ISR & (1 << 7)) {
 				break;
 		}			
@@ -397,6 +431,8 @@ void transmitChar(char c){
 
 void transmitString (char c[]){
 	uint32_t i = 0;
+	
+	// Loop through the string transmitting each character
 	while (c[i] != '\0') {
 		transmitChar(c[i]);
 		i = i + 1;
@@ -406,132 +442,48 @@ void transmitString (char c[]){
 // This is the PPG interrupt from the heart rate chip
 // PB0 is interrupt
 void EXTI4_15_IRQHandler() {
-	
-		counter = counter + 1;                                 
-		if(counter > 1){
-			GPIOC->ODR |= (1 << 9);
-		}
-		/*	// Attempting to read the interrupt
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
-    I2C2->CR2 &= ~(1 << 10);
-    I2C2->CR2 |= (1 << 13);
-		
-		//GPIOC->ODR |= (1 << 6);
-   	 
-    // Should be breaking when TXIS is set
-    while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 1)) {
-   		 break;
-   	 }
-    }
-		
-		// Address where PPG ready enable is
-		//GPIOC->ODR |= (1 << 7);
-    I2C2->TXDR = (0x00 << 0);
-    
-    while(!(I2C2->ISR & (1 << 6))) {
-    }
-    
-		//GPIOC->ODR |= (1 << 8);
-    I2C2->CR2 |= (1 << 14);
-		
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-    I2C2->CR2 |= ((1 << 16) | (0x57 << 1));
-    I2C2->CR2 |= (1 << 10);
-    I2C2->CR2 |= (1 << 13);
-		
-		 while (1) {
-   	 if (I2C2->ISR & (1 << 4)) {
-   			 GPIOC->ODR ^= (1 << 6);
-				 HAL_Delay(100);
-   	 }
-   	 if (I2C2->ISR & (1 << 2)) {
-   		 break;
-   	 }
-    }
-		
-		//GPIOC->ODR &= ~(1 << 9);
-		int test = I2C2->RXDR; 
-	
-		if(test & (1 << 0)){
-			GPIOC->ODR |= (1 << 6);
-			return;
-		}
-		else{
-			GPIOC->ODR &= ~(1 << 6);
-		}*/
-			
 	/* 
-Reading data register:
-	Set up device for write mode
-	Send address of FIFO data register
-	Set up device for read mode
-	Read from FIFO data register
-	Save data from read
-	Read from FIFO data register
-	Save data from read
-	Read from FIFO data register
-	Save data from read
-	Set FIFO write pointer register to 0
-	Set OVF counter register to 0
-	Set FIFO read pointer register to 0
-*/
+	Reading data register:
+		Set up device for write mode
+		Send address of FIFO data register
+		Set up device for read mode
+		Read from FIFO data register
+		Save data from read
+		Read from FIFO data register
+		Save data from read
+		Read from FIFO data register
+		Save data from read
+	*/
 	
+	// Read the sample
 	restartWriteCondition(1);
 	waitForTxis();
 	I2C2->TXDR = 0x07;
 	waitForTC();
-	restartReadCondition(2);
+	restartReadCondition(3);
 	WaitForRXNEorNACKF();
 	uint32_t sample = I2C2->RXDR;
 	WaitForRXNEorNACKF();
 	sample = (sample << 8) | I2C2->RXDR;
-	waitForTC();
-	_sample = sample;
-	
-	
-	//if(_sample > 150){
-		//GPIOC->ODR ^= (1 << 7);
-	//}
-	
-	//if(_sample > 2000){
-		//GPIOC->ODR ^= (1 << 8);
-	//}
-	// Reset pointers
-	restartWriteCondition(2);
-	waitForTxis();
-	I2C2->TXDR = 0x04; // Write pointer
-	waitForTxis();
-	I2C2->TXDR = 0x00;
+	WaitForRXNEorNACKF();
+	sample = (sample << 8) | I2C2->RXDR;
 	waitForTC();
 	
-	restartWriteCondition(2);
-	waitForTxis();
-	I2C2->TXDR = 0x05; // Overflow pointer
-	waitForTxis();
-	I2C2->TXDR = 0x00;
-	waitForTC();
-	
-	restartWriteCondition(2);
-	waitForTxis();
-	I2C2->TXDR = 0x06; // Read pointer
-	waitForTxis();
-	I2C2->TXDR = 0x00;
-	waitForTC();
-	
-	//GPIOC->ODR |= (1 << 8);
-	
-	EXTI->PR |= (1 << 9);
-	if(counter > 1){
-		
-	GPIOC->ODR |= (1 << 7);
+	// Process the sample that was read
+	if(sample > 150){
+		_sample = 0;
 	}
+	else{
+		_sample = sample;
+	}
+	 
+	// Update the DAC
+	DAC->SWTRIGR |= (1 << 0);
+   
+	DAC->DHR8R1 = (_sample * 255) / 150;
 	
+	// Acknowledge the interrupt as complete
+	EXTI->PR |= (1 << 9);
 }
 
 void restartWriteCondition(uint16_t numBytes) {
@@ -577,14 +529,83 @@ void WaitForRXNEorNACKF(void)
 }
 
 
-// Send out to UART
-void TIM2_IRQHandler(void) {
-	GPIOC->ODR ^= (1 << 7);
-	triggered = 1;
+void TIM2_IRQHandler() {
+	// Send the Sample out through UART
+	printSample(_sample);
+	
+	// Acknowledge the interrupt as complete
 	TIM2->SR &= ~(1 << 0);
+}
 
+
+void TIM3_IRQHandler(){
+	// Update the timer based on the new sample and blink the LED if a heart rate is being read
+	TIM3->CR1 &= ~(1 << 0);
+	if(_sample == 0){
+		GPIOC->ODR &= ~(1 << 6);
+		TIM3->ARR = 500;
+	}
+	else{
+		GPIOC->ODR ^= (1 << 6);
+		TIM3->ARR = 60000 / _sample / 2;
+	}
+	TIM3->CR1 |= (1 << 0);
+	
+	// Achnowledge the interrupt as complete 
+	TIM3->SR &= ~(1 << 0);
 }
 /* USER CODE END 4 */
+
+void printSample(uint32_t sample){
+	transmitString("Heart Rate: ");
+	int i;
+	int divider = 100;
+	int mod = 10;
+	// transmit each digit
+	for(i = 0; i < 3; i++){
+		int num;
+		num = sample / divider;
+		num = num % mod;
+		divider = divider / 10;
+		switch(num) {
+			case 0:
+				transmitChar('0');
+				break;
+			case 1:
+				transmitChar('1');
+				break;
+			case 2:
+				transmitChar('2');
+				break;
+			case 3:
+				transmitChar('3');
+				break;
+			case 4:
+				transmitChar('4');
+				break;
+			case 5:
+				transmitChar('5');
+				break;
+			case 6:
+				transmitChar('6');
+				break;
+			case 7:
+				transmitChar('7');
+				break;
+			case 8:
+				transmitChar('8');
+				break;
+			case 9:
+				transmitChar('9');
+				break;
+			default:
+				break;
+		}
+				
+	}		
+	
+	transmitString("\r\n");
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
