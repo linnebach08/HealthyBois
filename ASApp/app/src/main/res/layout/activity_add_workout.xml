@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Workouts">
+
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:minHeight="?actionBarSize"
+            android:padding="@dimen/appbar_padding"
+            android:text="@string/app_name"
+            android:fontFamily="@font/tempo"
+            android:textSize="24sp"
+            android:layout_gravity="center"
+            android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title" />
+
+
+    </com.google.android.material.appbar.AppBarLayout>
+            <TableLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                >
+
+                <TableRow android:paddingTop="65dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+                    <!-- Arms -->
+                    <Button
+                        android:id="@+id/workouts_arms"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="1dp"
+                        android:layout_column="1"
+                        android:text="Arms"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workout_arms"/>
+                    <!--@drawable/button_focused_orange-->
+                    <!-- Back -->
+                    <Button
+                        android:id="@+id/workouts_back"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="1dp"
+                        android:layout_marginRight="4dp"
+                        android:layout_column="2"
+                        android:text="Back"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_back"/>
+                </TableRow>
+
+                <TableRow android:paddingTop="1dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+                    <!-- Cardio -->
+                    <Button
+                        android:id="@+id/workouts_cardio"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="1dp"
+                        android:layout_column="1"
+                        android:text="Cardio"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_cardio"/>
+                    <!-- Chest -->
+                    <Button
+                        android:id="@+id/workouts_chest"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="1dp"
+                        android:layout_marginRight="4dp"
+                        android:layout_column="2"
+                        android:text="Chest"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_chest"/>
+                </TableRow>
+
+                <TableRow android:paddingTop="1dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+                    <!-- Core -->
+                    <Button
+                        android:id="@+id/workouts_core"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="1dp"
+                        android:layout_column="1"
+                        android:text="Core"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_core"/>
+                    <!-- Legs -->
+                    <Button
+                        android:id="@+id/workouts_legs"
+                        android:layout_width="0dp"
+                        android:layout_height="198dp"
+                        android:layout_weight="0.5"
+                        android:gravity="center"
+                        android:layout_marginLeft="1dp"
+                        android:layout_marginRight="4dp"
+                        android:layout_column="2"
+                        android:text="Legs"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_legs"/>
+                </TableRow>
+
+                <TableRow android:paddingTop="1dp"
+                    android:layout_width="50dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+                <!-- Shoulders -->
+                    <Button
+                        android:id="@+id/workouts_shoulders"
+                        android:layout_width="0dp"
+                        android:layout_height="155dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="4dp"
+                        android:layout_column="1"
+                        android:text="Shoulders"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@drawable/workouts_shoulders"/>
+
+                    <Button
+                        android:id="@+id/create_workout_back_button"
+                        android:layout_width="0dp"
+                        android:layout_height="155dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="4dp"
+                        android:layout_column="1"
+                        android:text="Go Back"
+                        android:textSize="24sp"
+                        android:fontFamily="@font/tempo"
+                        android:textAllCaps="false"
+                        android:background="@color/cardview_shadow_end_color"/>
+                </TableRow>
+            </TableLayout>
+    <include layout="@layout/content_add_workout" />
+
+</FrameLayout>

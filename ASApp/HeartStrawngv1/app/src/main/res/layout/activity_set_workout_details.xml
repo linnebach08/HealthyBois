@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".setWorkoutDetails">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.AppBarOverlay">
+
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:minHeight="?actionBarSize"
+            android:padding="@dimen/appbar_padding"
+            android:text="@string/app_name"
+            android:fontFamily="@font/tempo"
+            android:textSize="24sp"
+            android:layout_gravity="center"
+            android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="95dp"
+        android:paddingLeft="10dp"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/workout_name"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_horizontal"
+            android:textSize="35sp"
+            android:fontFamily="@font/tempo"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="170dp"
+        >
+        <View style="@style/Divider"
+            android:background="@color/colorAccent"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/first_input"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="200dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:orientation="horizontal"
+        android:weightSum="2">
+
+        <TextView
+            android:id="@+id/workout_reps"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:gravity="center_vertical"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_weight="0.8"
+            />
+
+        <Button
+            android:id="@+id/workout_reps_minus_btn"
+            android:layout_gravity="end"
+            android:layout_width="40dp"
+            android:layout_height="50dp"
+            android:layout_weight="0.3"
+            android:textSize="20sp"
+            android:text="-"/>
+        <EditText
+            android:id="@+id/workout_reps_input"
+            android:layout_gravity="end"
+            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_weight="0.6"
+            android:inputType="number"
+            android:gravity="center"
+            android:hint="0"/>
+        <Button
+            android:id="@+id/workout_reps_plus_btn"
+            android:layout_gravity="end"
+            android:layout_width="40dp"
+            android:layout_height="50dp"
+            android:layout_weight="0.3"
+            android:textSize="20sp"
+            android:text="+"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/second_input"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="300dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:orientation="horizontal"
+        android:weightSum="2">
+        <TextView
+            android:id="@+id/workout_weight"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:gravity="center_vertical"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_weight="0.6"
+            />
+
+        <Button
+            android:id="@+id/workout_weight_minus_btn"
+            android:layout_gravity="end"
+            android:layout_width="40dp"
+            android:layout_height="50dp"
+            android:layout_weight="0.35"
+            android:textSize="20sp"
+            android:text="-"/>
+        <EditText
+            android:id="@+id/workout_weight_input"
+            android:layout_gravity="end"
+            android:layout_height="wrap_content"
+            android:layout_width="50dp"
+            android:layout_weight="0.7"
+            android:inputType="numberDecimal"
+            android:gravity="center"
+            android:hint="0.0"/>
+        <Button
+            android:id="@+id/workout_weight_plus_btn"
+            android:layout_gravity="end"
+            android:layout_width="40dp"
+            android:layout_height="50dp"
+            android:layout_weight="0.35"
+            android:textSize="20sp"
+            android:text="+"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="10dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:orientation="horizontal"
+        android:weightSum="1">
+        <Button
+            android:id="@+id/workout_save_btn"
+            android:layout_width="0dp"
+            android:layout_height="45dp"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:text="Save"
+            android:textSize="24sp"
+            android:background="@color/colorAccent"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/saved_workouts"
+        android:layout_width="match_parent"
+        android:layout_height="245dp"
+        android:layout_marginTop="460dp"/>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="735dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:orientation="horizontal"
+        android:weightSum="1">
+        <Button
+            android:id="@+id/finished_btn"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="0.4"
+            android:layout_gravity="center"
+            android:textSize="24sp"
+            android:text="Finished"
+            android:textColor="@color/white"
+            android:clickable="false"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+
+
+    <!--<LinearLayout
+        android:id="@+id/saved_workouts_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="450dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:orientation="vertical"
+        android:weightSum="1">
+
+    </LinearLayout>-->
+
+
+    <include layout="@layout/content_set_workout_details" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/set_workout_details_back_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin"
+        app:srcCompat="@drawable/back_arrow" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/popupLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <EditText
+        android:id="@+id/new_workout_name"
+        android:layout_width="280dp"
+        android:layout_height="57dp"
+        android:layout_marginTop="16dp"
+        android:ems="10"
+        android:hint="Workout Name"
+        android:inputType="textPersonName"
+        android:paddingStart="4dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.213"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="180dp"
+        android:layout_height="49dp"
+        android:layout_marginStart="16dp"
+        android:paddingStart="4dp"
+        android:paddingTop="4dp"
+        android:text="Workout Intensity"
+        android:textSize="18sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/new_workout_name" />
+
+    <RadioGroup
+        android:id="@+id/intensity_btns"
+        android:layout_width="155dp"
+        android:layout_height="178dp"
+        android:paddingStart="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.3"
+        app:layout_constraintStart_toEndOf="@+id/textView2"
+        app:layout_constraintTop_toBottomOf="@+id/new_workout_name">
+
+        <RadioButton
+            android:id="@+id/easyBtn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Easy" />
+
+        <RadioButton
+            android:id="@+id/moderateBtn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Moderate" />
+
+        <RadioButton
+            android:id="@+id/hardBtn"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Hard" />
+    </RadioGroup>
+</androidx.constraintlayout.widget.ConstraintLayout>

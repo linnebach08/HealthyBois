@@ -2,7 +2,7 @@ heartratesensor\system_stm32f0xx.o: ../Core/Src/system_stm32f0xx.c
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f0xx.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f072xb.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Include/core_cm0.h
-heartratesensor\system_stm32f0xx.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+heartratesensor\system_stm32f0xx.o: E:\Keil\ARM\ARMCC\Bin\..\include\stdint.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Include/cmsis_version.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Include/cmsis_compiler.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Include/cmsis_armcc.h
@@ -13,7 +13,7 @@ heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0x
 heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_def.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f0xx.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h
-heartratesensor\system_stm32f0xx.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+heartratesensor\system_stm32f0xx.o: E:\Keil\ARM\ARMCC\Bin\..\include\stddef.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_rcc_ex.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_gpio.h
 heartratesensor\system_stm32f0xx.o: ../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_gpio_ex.h

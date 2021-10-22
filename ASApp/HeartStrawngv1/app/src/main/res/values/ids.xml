@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="hours_input" type="id"/>
+    <item name="seconds_input" type="id"/>
+    <item name="minutes_input" type="id" />
+    <item name="distance_choice" type="id" />
+    <item name="saved_workouts_table" type="id" />
+</resources>

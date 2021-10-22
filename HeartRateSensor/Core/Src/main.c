@@ -60,6 +60,7 @@ void waitForTC(void);
 void WaitForRXNEorNACKF(void);
 volatile uint32_t _sample;
 volatile uint32_t counter = 0;
+volatile uint32_t triggered = 0;
 
 
 
@@ -92,17 +93,35 @@ int main(void)
 	initializeUART();
 	//initializeHeartRateChip();
 	//setUpInterrupts();
-	//setUpTimer();
+	setUpTimer();
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
+	uint32_t tests1[10] = {50, 75, 65, 80, 110, 95, 60, 80, 55, 100};
+
+	uint32_t index = 0;
 	
   while (1)
   {
-		HAL_Delay(100);
-		GPIOC->ODR ^= (1 << 6);
-		transmitString("Test\r\n");
+		if (triggered == 1) {
+			triggered = 0;
+			TIM2->CR1 &= ~(1 << 0);
+			TIM2->PSC = 7999;
+			TIM2->ARR = 60000 / tests1[index];
+			TIM2->DIER |= (1 << 0);
+			TIM2->CR1 |= (1 << 0);
+			GPIOC->ODR ^= (1 << 8);
+			index++;
+			if (index > 9) {
+				index = 0;
+			}
+		}
+		
+
+		//HAL_Delay(100);
+		//GPIOC->ODR ^= (1 << 6);
+		//transmitString("Test\r\n");
   }
   /* USER CODE END 3 */
 }
@@ -559,8 +578,11 @@ void WaitForRXNEorNACKF(void)
 
 
 // Send out to UART
-void TIM2_IRQHandler() {
-	
+void TIM2_IRQHandler(void) {
+	GPIOC->ODR ^= (1 << 7);
+	triggered = 1;
+	TIM2->SR &= ~(1 << 0);
+
 }
 /* USER CODE END 4 */
 
