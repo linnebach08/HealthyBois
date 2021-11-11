@@ -59,7 +59,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
         sets = new ArrayList<Set>();
 
         RecyclerView recyclerLayout = findViewById(R.id.saved_workouts);
-        adapter = new RecyclerListAdapter(this, items, this::onStartDrag);
+        adapter = new RecyclerListAdapter(this, items, this::onStartDrag, false);
 
         recyclerLayout.setHasFixedSize(true);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -78,17 +78,17 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
         // Gets the data sent from the previous view
         Bundle extras = getIntent().getExtras();
         final String name;
-        String type;
         Exercise e;
+        ArrayList<String> vals;
         if (extras != null) {
             name = extras.getString("name");
-            type = extras.getString("type");
             e = (Exercise) extras.getSerializable("fullDetails");
+            vals = extras.getStringArrayList("setInfo");
         }
         else {
             name = "Error";
-            type = "Error";
             e = null;
+            vals = new ArrayList<>();
         }
 
         TextView title = (TextView) findViewById(R.id.workout_name);
@@ -112,12 +112,6 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
 
         boolean firstParameter = false;
         boolean secondParameter = false;
-
-        /*TextView rep = (TextView) findViewById(R.id.workout_reps);
-        rep.setText(String.valueOf(e.repsBased));
-
-        TextView weigh = (TextView) findViewById(R.id.workout_weight);
-        weigh.setText(String.valueOf(e.weightUsed));*/
 
         if (e.repsBased) {
             if ((!e.name.equals("Arm Circles")) && (!e.name.equals("Counterclockwise Arm Circle"))
@@ -448,6 +442,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
 
         final Button finishedBtn = findViewById(R.id.finished_btn);
 
+        if (vals.size() != 0) {
+            for (String set : vals) {
+                String styledText = "<strong> " + set + " </strong>";
+
+                items.add(Html.fromHtml(styledText));
+                adapter.notifyItemInserted(items.size());
+            }
+        }
         finishedBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -497,7 +499,13 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
 
                 /*********** Formats all combinations of parameters for drag/drop list ***********/
 
-                String secondRowText = (String) ((TextView) findViewById(R.id.workout_weight)).getText();
+                String secondRowText;
+                if (findViewById(R.id.workout_weight) != null) {
+                    secondRowText = (String) ((TextView) findViewById(R.id.workout_weight)).getText();
+                }
+                else {
+                    secondRowText = "";
+                }
                 String firstRowText = (String) ((TextView) findViewById(R.id.workout_reps)).getText();
 
                 // 1. Time 2. Weight

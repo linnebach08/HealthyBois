@@ -13,7 +13,6 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
-import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import androidx.annotation.RequiresApi;
@@ -30,6 +29,7 @@ import android.widget.ProgressBar;
 import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -46,7 +46,7 @@ import java.util.Map;
 public class AddWorkoutActivity extends AppCompatActivity {
     ArrayList<Exercise> savedExercises;
 
-    List<Exercise> arm_workouts = new ArrayList<>();
+    public List<Exercise> arm_workouts = new ArrayList<>();
     List<Exercise> back_workouts = new ArrayList<>();
     List<Exercise> cardio_workouts = new ArrayList<>();
     List<Exercise> chest_workouts = new ArrayList<>();
@@ -62,115 +62,157 @@ public class AddWorkoutActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_workout);
         savedExercises = new ArrayList<>();
 
+        // Gets the data sent from the previous view
+        Bundle extras = getIntent().getExtras();
+        boolean addWorkout;
+        int workoutID;
+        int highestOrderNum;
+        int userID;
+        if (extras != null) {
+            addWorkout = extras.getBoolean("addWorkout");
+            workoutID = extras.getInt("workoutID");
+            highestOrderNum = extras.getInt("highestOrderNum");
+            userID = extras.getInt("userID");
+        }
+        else {
+            addWorkout = true;
+            workoutID = -1;
+            highestOrderNum = -1;
+            userID = -1;
+        }
+        RelativeLayout layout = findViewById(R.id.progress_layout);
+
+
         Button goBackBtn = (Button) findViewById(R.id.create_workout_back_button);
 
         goBackBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if (savedExercises.size() == 0) {
-                    finish();
+                if (addWorkout) {
+                    if (savedExercises.size() == 0) {
+                        finish();
+                    }
+                    else {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                        builder.setTitle("New Workout");
+
+                        LayoutInflater popupInflater = getLayoutInflater();
+                        View dialogLayout = popupInflater.inflate(R.layout.finished_workout_popup, null);
+                        builder.setView(dialogLayout);
+
+                        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String workoutName = ((EditText) dialogLayout.findViewById(R.id.new_workout_name)).getText().toString();
+
+                                if (workoutName.equals("")) {
+                                    ((EditText) dialogLayout.findViewById(R.id.new_workout_name)).setHint("Please enter a workout name");
+                                    return;
+                                }
+                                RadioGroup group = (RadioGroup) dialogLayout.findViewById(R.id.intensity_btns);
+                                int intensity = group.getCheckedRadioButtonId();
+                                String convertedIntensity;
+
+                                switch(intensity) {
+                                    case R.id.easyBtn:
+                                        convertedIntensity = "E";
+                                        break;
+                                    case R.id.moderateBtn:
+                                        convertedIntensity = "M";
+                                        break;
+                                    case R.id.hardBtn:
+                                        convertedIntensity = "H";
+                                        break;
+                                    default:
+                                        convertedIntensity = "N";
+                                }
+
+                                // Instantiate the RequestQueue.
+                                RequestQueue queue = Volley.newRequestQueue(dialogLayout.getContext());
+                                String postUrl = "https://heartstrawng.azurewebsites.net/workout";
+                                JSONArray exercisesArr = new JSONArray();
+
+                                JSONObject postData = new JSONObject();
+                                try {
+                                    Log.d("USERID", String.valueOf(userID));
+
+                                    postData.put("userID", userID);
+                                    postData.put("workoutName", workoutName);
+                                    postData.put("intensity", convertedIntensity);
+                                    // Temporary
+                                    postData.put("duration", 200);
+                                    // End temporary
+
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                                for (int i = 0; i < savedExercises.size(); i++) {
+                                    JSONObject o = new JSONObject();
+                                    try {
+                                        o.put("exerciseID", savedExercises.get(i).id);
+                                        o.put("exerciseType", savedExercises.get(i).exerciseType);
+                                        o.put("repsTimeOrDistanceVal", savedExercises.get(i).repsTimeOrDistanceVal);
+                                        if (savedExercises.get(i).weightUsed) {
+                                            o.put("weightValue", savedExercises.get(i).weightVal);
+                                        }
+                                    } catch (JSONException e) {
+                                        Log.d("JSONERR", e.toString());
+                                    }
+                                    exercisesArr.put(o);
+                                }
+
+                                try {
+                                    postData.put("exercises", exercisesArr);
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+                                Log.d("POSTDATA", "EX: " + postData);
+
+                                // Request a string response from the provided URL.
+                                JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, postUrl,
+                                        postData,
+                                        response -> {
+                                            setResult(Activity.RESULT_OK);
+                                            finish();
+                                        }, error -> {
+                                    Log.d("ERROR", error.toString());
+
+                                });
+
+                                stringRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+                                // Add the request to the RequestQueue.
+                                queue.add(stringRequest);
+
+                                Intent resultIntent = new Intent();
+
+                                resultIntent.putExtra("exercises", savedExercises);
+                                resultIntent.putExtra("workout_name", workoutName);
+                                //setResult(Activity.RESULT_OK, resultIntent);
+                                //finish();
+                            }
+                        });
+                        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.cancel();
+                            }
+                        });
+
+                        builder.show();
+                    }
                 }
                 else {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-                    builder.setTitle("New Workout");
+                    if (savedExercises.size() != 0) {
+                        recursivelyAddExercises(0, workoutID, highestOrderNum, v);
+                        String addedExercise = "Exercises added!";
+                        int duration = Toast.LENGTH_SHORT;
 
-                    LayoutInflater popupInflater = getLayoutInflater();
-                    View dialogLayout = popupInflater.inflate(R.layout.finished_workout_popup, null);
-                    builder.setView(dialogLayout);
-
-                    builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            String workoutName = ((EditText) dialogLayout.findViewById(R.id.new_workout_name)).getText().toString();
-                            RadioGroup group = (RadioGroup) dialogLayout.findViewById(R.id.intensity_btns);
-                            int intensity = group.getCheckedRadioButtonId();
-                            String convertedIntensity;
-
-                            switch(intensity) {
-                                case R.id.easyBtn:
-                                    convertedIntensity = "E";
-                                    break;
-                                case R.id.moderateBtn:
-                                    convertedIntensity = "M";
-                                    break;
-                                case R.id.hardBtn:
-                                    convertedIntensity = "H";
-                                    break;
-                                default:
-                                    convertedIntensity = "N";
-                            }
-                            // TODO: Open communication to database and send workout name and details
-
-                            // Instantiate the RequestQueue.
-                            RequestQueue queue = Volley.newRequestQueue(dialogLayout.getContext());
-                            String postUrl = "https://heartstrawng.azurewebsites.net/workout";
-                            JSONArray exercisesArr = new JSONArray();
-
-                            JSONObject postData = new JSONObject();
-                            try {
-                                postData.put("userID", 1);
-                                postData.put("workoutName", workoutName);
-                                // Temporary
-                                postData.put("duration", 200);
-                                // End temporary
-                                postData.put("intensity", convertedIntensity);
-
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                            for (int i = 0; i < savedExercises.size(); i++) {
-                                JSONObject o = new JSONObject();
-                                try {
-                                    o.put("exerciseID", savedExercises.get(i).id);
-                                    o.put("exerciseType", savedExercises.get(i).exerciseType);
-                                    o.put("repsTimeOrDistanceVal", savedExercises.get(i).repsTimeOrDistanceVal);
-                                    if (savedExercises.get(i).weightUsed) {
-                                        o.put("weightValue", savedExercises.get(i).weightVal);
-                                    }
-                                } catch (JSONException e) {
-                                    Log.d("JSONERR", e.toString());
-                                }
-                                exercisesArr.put(o);
-                            }
-
-                            try {
-                                postData.put("exercises", exercisesArr);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
-                            // Request a string response from the provided URL.
-                            JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.POST, postUrl,
-                                    postData,
-                                    response -> {
-                                        setResult(Activity.RESULT_OK);
-                                        finish();
-                                    }, error -> {
-                                        Log.d("ERROR", error.toString());
-
-                            });
-
-                            stringRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-
-                            // Add the request to the RequestQueue.
-                            queue.add(stringRequest);
-
-                            Intent resultIntent = new Intent();
-
-                            resultIntent.putExtra("exercises", savedExercises);
-                            resultIntent.putExtra("workout_name", workoutName);
-                            //setResult(Activity.RESULT_OK, resultIntent);
-                            //finish();
-                        }
-                    });
-                    builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            dialog.cancel();
-                        }
-                    });
-
-                    builder.show();
+                        Toast toast = Toast.makeText(v.getContext(), addedExercise, duration);
+                        toast.show();
+                    }
+                    setResult(Activity.RESULT_OK);
+                    finish();
                 }
             }
         });
@@ -184,7 +226,8 @@ public class AddWorkoutActivity extends AppCompatActivity {
         Button shouldersBtn = (Button) findViewById(R.id.workouts_shoulders);
         Button sportsBtn = (Button) findViewById(R.id.workouts_sports);
 
-        RelativeLayout layout = findViewById(R.id.progress_layout);
+        //RelativeLayout layout = doLoadingScreen("Loading exercises...");
+
         ProgressBar progressBar = new ProgressBar(this);
         progressBar.setVisibility(View.VISIBLE);
         progressBar.setIndeterminate(true);
@@ -273,6 +316,10 @@ public class AddWorkoutActivity extends AppCompatActivity {
                             for (Map.Entry<String, ?> entry : exerciseName.entrySet()) {
                                 if (entry.getKey().toString().equals("maxID")) {
                                     maxID = (int) entry.getValue();
+                                }
+                                else if (entry.getKey().toString().equals("password") || entry.getKey().toString().equals("rememberMe")
+                                        || entry.getKey().toString().equals("username")) {
+                                    continue;
                                 }
                                 else {
                                     Iterator<String> iterator = ((HashSet<String>)entry.getValue()).iterator();
@@ -404,7 +451,6 @@ public class AddWorkoutActivity extends AppCompatActivity {
                                 else {
                                     Intent setWorkoutDetailsIntent = new Intent(v.getContext(), setWorkoutDetails.class);
                                     setWorkoutDetailsIntent.putExtra("name", workouts.get(which).name);
-                                    setWorkoutDetailsIntent.putExtra("type", type);
                                     setWorkoutDetailsIntent.putExtra("fullDetails", workouts.get(which));
                                     startActivityForResult(setWorkoutDetailsIntent, 1);
                                     //startActivity(setWorkoutDetailsIntent);
@@ -435,15 +481,27 @@ public class AddWorkoutActivity extends AppCompatActivity {
                 ArrayList<Set> sets = (ArrayList<Set>) data.getSerializableExtra("sets");
 
                 for (int i = 0; i < sets.size(); i++) {
-                    // TODO: add list of sets to exercise
                     Exercise toAdd;
 
                     if ((timeBased && distanceBased) || (repsBased && timeBased)) {
-                        toAdd = new Exercise(name, false, true, false, false, id, "T", sets.get(i).timeVal);
+                        if (sets.get(i).timeVal == 0 && (repsBased && timeBased)) {
+                            toAdd = new Exercise(name, false, true, false, false, id, "R", sets.get(i).repsVal);
+                        }
+                        else if (sets.get(i).timeVal == 0 && (timeBased && distanceBased)) {
+                            toAdd = new Exercise(name, false, true, false, false, id, "D", sets.get(i).distanceVal);
+                        }
+                        else {
+                            toAdd = new Exercise(name, false, true, false, false, id, "T", sets.get(i).timeVal);
+                        }
                         // TODO: add distance/reps and some sort of identifier to user device
                     }
                     else if (repsBased && distanceBased) {
-                        toAdd = new Exercise(name, false, false, true, false, id, "D", sets.get(i).distanceVal);
+                        if (sets.get(i).distanceVal == 0) {
+                            toAdd = new Exercise(name, false, false, true, false, id, "R", sets.get(i).repsVal);
+                        }
+                        else {
+                            toAdd = new Exercise(name, false, false, true, false, id, "D", sets.get(i).distanceVal);
+                        }
                     }
                     else if (timeBased){
                         if (sets.get(i).weightVal != 0.0) {
@@ -541,18 +599,61 @@ public class AddWorkoutActivity extends AppCompatActivity {
             }
         }
     }
+    public RelativeLayout doLoadingScreen(String text) {
+        RelativeLayout layout = (RelativeLayout) findViewById(R.id.progress_layout);
 
-}
+        ProgressBar progressBar = new ProgressBar(this);
+        progressBar.setVisibility(View.VISIBLE);
+        progressBar.setIndeterminate(true);
+        progressBar.setPadding(650, 1100, 100, 200);
 
-/*class Pair implements Serializable {
-    private String name;
-    private ArrayList<String> sets;
+        TextView loadingText = new TextView(this);
+        loadingText.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        loadingText.setTextSize(24);
+        loadingText.setText(text);
+        loadingText.setPadding(375, 1350, 100, 200);
+        Log.d("PROGRESS", progressBar.toString());
+        layout.addView(progressBar);
+        layout.addView(loadingText);
 
-    Pair(String n, ArrayList<String> s) {
-        this.name = n;
-        this.sets = s;
+        return layout;
     }
-}*/
+
+    public void recursivelyAddExercises(int index, int workoutID, int highestOrderNum, View v) {
+
+        if (index == savedExercises.size()) {
+            return;
+        }
+        RequestQueue queue = Volley.newRequestQueue(v.getContext());
+        String postUrl = "https://heartstrawng.azurewebsites.net/workout/" + workoutID + "/exercise";
+        JSONObject o = new JSONObject();
+        try {
+            o.put("exerciseID", savedExercises.get(index).id);
+            o.put("orderNum", (highestOrderNum + index + 1));
+            o.put("exerciseType", savedExercises.get(index).exerciseType);
+            o.put("repsTimeOrDistanceVal", savedExercises.get(index).repsTimeOrDistanceVal);
+            if (savedExercises.get(index).weightUsed) {
+                o.put("weightValue", savedExercises.get(index).weightVal);
+            }
+        } catch (JSONException e) {
+            Log.d("JSONERR", e.toString());
+        }
+        // Request a string response from the provided URL.
+        JsonObjectRequest addExerciseRequest = new JsonObjectRequest(Request.Method.POST, postUrl,
+                o,
+                response -> {
+                    recursivelyAddExercises(index + 1, workoutID, highestOrderNum, v);
+                }, error -> {
+            Log.d("ERROR", o.toString());
+
+        });
+
+        addExerciseRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        // Add the request to the RequestQueue.
+        queue.add(addExerciseRequest);
+    }
+}
 
 class Exercise implements Serializable {
     public String name;
@@ -569,7 +670,6 @@ class Exercise implements Serializable {
     public double repsTimeOrDistanceVal;
     public double weightVal;
 
-    // TODO: Should probably add more constructors so I don't have to add -1 to id and sets in certain places
     Exercise(String n, boolean r, boolean t, boolean d, boolean w, int id, String exerciseType, double repsTimeOrDistanceVal, double weightVal) {
         this.name = n;
         this.repsBased = r;
