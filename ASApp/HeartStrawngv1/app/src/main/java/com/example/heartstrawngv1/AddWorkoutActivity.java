@@ -452,6 +452,7 @@ public class AddWorkoutActivity extends AppCompatActivity {
                                     Intent setWorkoutDetailsIntent = new Intent(v.getContext(), setWorkoutDetails.class);
                                     setWorkoutDetailsIntent.putExtra("name", workouts.get(which).name);
                                     setWorkoutDetailsIntent.putExtra("fullDetails", workouts.get(which));
+                                    setWorkoutDetailsIntent.putExtra("setInfo", new ArrayList<String>());
                                     startActivityForResult(setWorkoutDetailsIntent, 1);
                                     //startActivity(setWorkoutDetailsIntent);
                                 }

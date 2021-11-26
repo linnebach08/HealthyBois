@@ -17,15 +17,20 @@ import android.util.JsonReader;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
+import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
@@ -41,8 +46,10 @@ import org.w3c.dom.Text;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -58,6 +65,7 @@ public class Workouts extends Fragment {
     private String mParam2;
     private String name;
     private ArrayList<Exercise> exercises;
+    private HashMap<String, ArrayList<String>> fullWorkouts;
     private LinearLayout svd;
     private View returnedView;
     private int userID;
@@ -104,6 +112,7 @@ public class Workouts extends Fragment {
         Button showWorkoutView = (Button) view.findViewById(R.id.show_workout_button);
         svd = view.findViewById(R.id.saved);
         returnedView = view;
+        fullWorkouts = new HashMap<>();
 
         Bundle extras = this.getArguments();
         String firstName;
@@ -142,7 +151,25 @@ public class Workouts extends Fragment {
 
         showWorkoutView.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                // Instantiate the RequestQueue.
+                RequestQueue queue = Volley.newRequestQueue(returnedView.getContext());
+                String url = "https://heartstrawng.azurewebsites.net/workouts/schedule/" + userID;
 
+                // Request a string response from the provided URL.
+                JsonArrayRequest stringRequest = new JsonArrayRequest(Request.Method.GET, url,
+                        null,
+                        response -> {
+
+                        },
+                        error -> {
+                            Log.d("ERROR", error.toString());
+                        });
+
+                queue.add(stringRequest);
+
+                Intent showWorkoutIntent = new Intent(v.getContext(), ShowWorkout.class);
+                showWorkoutIntent.putExtra("workouts", fullWorkouts);
+                startActivityForResult(showWorkoutIntent, 5);
             }
         });
 
@@ -155,6 +182,14 @@ public class Workouts extends Fragment {
         if (requestCode == 1 || requestCode == 2 || requestCode == 3) {
             if (resultCode == Activity.RESULT_OK) {
                 getWorkouts(userID);
+            }
+        }
+        if (requestCode == 4) {
+            if (resultCode == Activity.RESULT_OK) {
+                if (data.getBooleanExtra("scheduled", false)) {
+                    getWorkouts(userID);
+                }
+
             }
         }
     }
@@ -230,10 +265,14 @@ public class Workouts extends Fragment {
                             String intensity = exercise.getString("intensity");
                             int duration = exercise.getInt("duration");
                             JSONArray exercises = exercise.getJSONArray("exercises");
-
                             TableRow newRow = new TableRow(returnedView.getContext());
                             newRow.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.MATCH_PARENT, 0));
                             newRow.setPadding(0, 0, 0, 90);
+
+                            ArrayList<String> exerciseNames = new ArrayList<>();
+                            for (int j = 0; j < exercises.length(); j++) {
+                                exerciseNames.add(exercises.get(j).toString());
+                            }
 
                             TextView newWrk = new TextView(returnedView.getContext());
                             newWrk.setLayoutParams(new TableRow.LayoutParams(0));
@@ -263,6 +302,85 @@ public class Workouts extends Fragment {
                             }
                             newWrkInt.setText(intensity);
 
+                            Button menuButton = new Button(returnedView.getContext());
+                            menuButton.setBackgroundResource(R.drawable.menu_options);
+                            menuButton.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
+                            menuButton.setScaleX(0.2F);
+                            menuButton.setScaleY(0.6F);
+                            menuButton.setPadding(100, 0, 0, 0);
+                            menuButton.setLayoutParams(new TableRow.LayoutParams(2));
+                            String finalIntensity = intensity;
+                            menuButton.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View view) {
+                                    PopupMenu options = new PopupMenu(returnedView.getContext(), menuButton);
+
+                                    // Inflating popup menu from popup_menu.xml file
+                                    options.getMenuInflater().inflate(R.menu.popup_menu, options.getMenu());
+                                    options.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                                        @Override
+                                        public boolean onMenuItemClick(MenuItem menuItem) {
+                                            String title = (String) menuItem.getTitle();
+
+                                            if (title.equals("Start")) {
+                                                Intent startWorkoutIntent = new Intent(view.getContext(), StartWorkout.class);
+                                                startWorkoutIntent.putExtra("exercises", exerciseNames);
+                                                startWorkoutIntent.putExtra("workoutName", workoutName);
+                                                startActivityForResult(startWorkoutIntent, 5);
+
+                                            } else if (title.equals("Schedule")) {
+                                                Intent scheduleIntent = new Intent(view.getContext(), ScheduleWorkout.class);
+                                                scheduleIntent.putExtra("workoutName", workoutName);
+                                                scheduleIntent.putExtra("workoutID", workoutID);
+                                                scheduleIntent.putExtra("userID", userID);
+                                                startActivityForResult(scheduleIntent, 4);
+
+                                            } else if (title.equals("Edit")) {
+                                                Intent editWorkoutIntent = new Intent(view.getContext(), EditWorkoutActivity.class);
+                                                editWorkoutIntent.putExtra("exercises", exercises.toString());
+                                                editWorkoutIntent.putExtra("workoutName", workoutName);
+                                                editWorkoutIntent.putExtra("intensity", finalIntensity);
+                                                startActivityForResult(editWorkoutIntent, 3);
+
+                                            } else if (title.equals("Add Exercise")) {
+                                                Intent addWorkoutIntent = new Intent(view.getContext(), AddWorkoutActivity.class);
+                                                addWorkoutIntent.putExtra("addWorkout", false);
+                                                addWorkoutIntent.putExtra("workoutID", workoutID);
+                                                addWorkoutIntent.putExtra("highestOrderNum", exercises.length());
+                                                startActivityForResult(addWorkoutIntent, 2);
+
+                                            } else if (title.equals("Delete")) {
+                                                String deleteUrl = "https://heartstrawng.azurewebsites.net/workout/" + workoutID;
+                                                Log.d("URL", deleteUrl);
+                                                StringRequest deleteRequest = new StringRequest(Request.Method.DELETE, deleteUrl,
+                                                        response1 -> {
+                                                            getWorkouts(userID);
+                                                            return;
+                                                        },
+                                                        error -> {
+                                                            Log.d("ERROR", error.toString());
+                                                        });
+                                                deleteRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+                                                queue.add(deleteRequest);
+
+                                            } else {
+                                                Toast.makeText(returnedView.getContext(), "Something odd happened", Toast.LENGTH_LONG).show();
+                                            }
+                                            return false;
+                                        }
+                                    });
+                                    // Showing the popup menu
+                                    options.show();
+                                }
+                            });
+
+                            /*TextView scheduleWrk = new TextView(returnedView.getContext());
+                            scheduleWrk.setBackgroundResource(android.R.drawable.ic_menu_my_calendar);
+                            scheduleWrk.setScaleX(0.6F);
+                            scheduleWrk.setScaleY(0.9F);
+                            scheduleWrk.setGravity(Gravity.CENTER);
+                            scheduleWrk.setLayoutParams(new TableRow.LayoutParams(3));
+
                             TextView addWrk = new TextView(returnedView.getContext());
                             addWrk.setBackgroundResource(android.R.drawable.ic_menu_add);
                             addWrk.setScaleX(0.6F);
@@ -270,6 +388,7 @@ public class Workouts extends Fragment {
                             addWrk.setGravity(Gravity.CENTER);
                             addWrk.setLayoutParams(new TableRow.LayoutParams(2));
 
+                            addWrk.setLayoutParams(new TableRow.LayoutParams(4));
 
                             TextView editWrk = new TextView(returnedView.getContext());
                             editWrk.setBackgroundResource(android.R.drawable.ic_menu_edit);
@@ -277,9 +396,11 @@ public class Workouts extends Fragment {
                             editWrk.setScaleY(0.9F);
                             editWrk.setGravity(Gravity.CENTER);
                             editWrk.setLayoutParams(new TableRow.LayoutParams(3));
+                            editWrk.setLayoutParams(new TableRow.LayoutParams(5));
 
                             TextView deleteWrk = new TextView(returnedView.getContext());
                             deleteWrk.setLayoutParams(new TableRow.LayoutParams(4));
+                            deleteWrk.setLayoutParams(new TableRow.LayoutParams(6));
                             deleteWrk.setTextSize(28);
                             deleteWrk.setClickable(true);
                             deleteWrk.setText("x");
@@ -292,6 +413,22 @@ public class Workouts extends Fragment {
                                 public void onClick(View view) {
                                     view.setBackgroundColor(Color.LTGRAY);
                                     newWrkInt.setBackgroundColor(Color.LTGRAY);
+                            TextView startWrk = new TextView(returnedView.getContext());
+                            editWrk.setBackgroundResource(android.R.drawable.ic_media_play);
+                            editWrk.setScaleX(0.6F);
+                            editWrk.setScaleY(0.9F);
+                            editWrk.setGravity(Gravity.CENTER);
+                            editWrk.setLayoutParams(new TableRow.LayoutParams(0));
+
+                            startWrk.setOnClickListener(view -> {
+                                Intent startWorkoutIntent = new Intent(view.getContext(), StartWorkout.class);
+                                startWorkoutIntent.putExtra("exercises", exerciseNames);
+                                startActivityForResult(startWorkoutIntent, 5);
+                            });*/
+
+                            /*newWrk.setOnClickListener(view -> {
+                                view.setBackgroundColor(Color.LTGRAY);
+                                newWrkInt.setBackgroundColor(Color.LTGRAY);
 
                                 }
                             });
@@ -301,8 +438,19 @@ public class Workouts extends Fragment {
                                 public void onClick(View view) {
                                     view.setBackgroundColor(Color.LTGRAY);
                                     newWrk.setBackgroundColor(Color.LTGRAY);
+                            newWrkInt.setOnClickListener(view -> {
+                                view.setBackgroundColor(Color.LTGRAY);
+                                newWrk.setBackgroundColor(Color.LTGRAY);
 
                                 }
+                            });
+
+                            scheduleWrk.setOnClickListener(view -> {
+                                Intent scheduleIntent = new Intent(view.getContext(), ScheduleWorkout.class);
+                                scheduleIntent.putExtra("workoutName", workoutName);
+                                scheduleIntent.putExtra("workoutID", workoutID);
+                                scheduleIntent.putExtra("userID", userID);
+                                startActivityForResult(scheduleIntent, 4);
                             });
 
                             deleteWrk.setOnClickListener(new View.OnClickListener() {
@@ -320,6 +468,19 @@ public class Workouts extends Fragment {
                                     deleteRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
                                     queue.add(deleteRequest);
                                 }
+                            deleteWrk.setOnClickListener(view -> {
+                                String deleteUrl = "https://heartstrawng.azurewebsites.net/workout/" + workoutID;
+                                Log.d("URL", deleteUrl);
+                                StringRequest deleteRequest = new StringRequest(Request.Method.DELETE, deleteUrl,
+                                        response1 -> {
+                                            getWorkouts(userID);
+                                            return;
+                                        },
+                                        error -> {
+                                            Log.d("ERROR", error.toString());
+                                        });
+                                deleteRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+                                queue.add(deleteRequest);
                             });
 
                             addWrk.setOnClickListener(new View.OnClickListener() {
@@ -330,6 +491,12 @@ public class Workouts extends Fragment {
                                     addWorkoutIntent.putExtra("workoutID", workoutID);
                                     addWorkoutIntent.putExtra("highestOrderNum", exercises.length());
                                     startActivityForResult(addWorkoutIntent, 2);
+                            addWrk.setOnClickListener(view -> {
+                                Intent addWorkoutIntent = new Intent(view.getContext(), AddWorkoutActivity.class);
+                                addWorkoutIntent.putExtra("addWorkout", false);
+                                addWorkoutIntent.putExtra("workoutID", workoutID);
+                                addWorkoutIntent.putExtra("highestOrderNum", exercises.length());
+                                startActivityForResult(addWorkoutIntent, 2);
 
                                 }
                             });
@@ -345,12 +512,22 @@ public class Workouts extends Fragment {
                                     startActivityForResult(editWorkoutIntent, 3);
                                 }
                             });
+                            editWrk.setOnClickListener(view -> {
+                                Intent editWorkoutIntent = new Intent(view.getContext(), EditWorkoutActivity.class);
+                                editWorkoutIntent.putExtra("exercises", exercises.toString());
+                                editWorkoutIntent.putExtra("workoutName", workoutName);
+                                editWorkoutIntent.putExtra("intensity", finalIntensity);
+                                startActivityForResult(editWorkoutIntent, 3);
+                            });*/
 
+                            //newRow.addView(startWrk);
                             newRow.addView(newWrk);
                             newRow.addView(newWrkInt);
-                            newRow.addView(addWrk);
-                            newRow.addView(editWrk);
-                            newRow.addView(deleteWrk);
+                            newRow.addView(menuButton);
+                            //newRow.addView(scheduleWrk);
+                            //newRow.addView(addWrk);
+                            //newRow.addView(editWrk);
+                            //newRow.addView(deleteWrk);
                             workoutList.addView(newRow);
                         }
 
@@ -371,3 +548,4 @@ public class Workouts extends Fragment {
         queue.add(stringRequest);
     }
 }
+

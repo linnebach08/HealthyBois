@@ -443,6 +443,10 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
         final Button finishedBtn = findViewById(R.id.finished_btn);
 
         if (vals.size() != 0) {
+            finishedBtn.setText("Finished");
+            finishedBtn.setTextColor(getResources().getColor(R.color.black));
+            finishedBtn.setBackgroundResource(R.color.colorAccent);
+            finishedBtn.setClickable(true);
             for (String set : vals) {
                 String styledText = "<strong> " + set + " </strong>";
 
@@ -460,6 +464,8 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                     String strTemp = temp.toString();
                     result.add(strTemp);
                 }
+                // TODO: (From editWorkout) allow user to only change ordering of workout and
+                // TODO: have that be updated in the database and in the editWorkout screen
                 resultIntent.putExtra("sets", sets);
                 resultIntent.putExtra("name", name);
                 resultIntent.putExtra("repsBased", e.repsBased);

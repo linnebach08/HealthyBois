@@ -72,6 +72,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
             }
         }
         else {
+            exerciseStrings = "";
             exercises = new JSONArray();
             workoutName = "";
             intensity = "";
@@ -102,6 +103,7 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
         for (int i = 0; i < exercises.length(); i++) {
             try {
                 JSONObject o = exercises.getJSONObject(i);
+                Log.d("OBJECT", "It's " + o);
                 String name = o.getString("exercise");
                 int repsTimeOrDistanceVal = o.getInt("repsTimeOrDistanceValue");
                 int orderingWithinWorkout = o.getInt("orderingWithinWorkout");
@@ -123,6 +125,14 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
                     if (same) {
                         exerciseDetails.add(new ExerciseItem(copyStyled, orderingWithinWorkout));
                         Log.d("ADDING", copyStyled);
+                        items.add(Html.fromHtml(copyStyled));
+
+                        count = 1;
+
+                        adapter.notifyItemInserted(items.size());
+                    }
+                    else if (i > 0) {
+                        exerciseDetails.add(new ExerciseItem(copyStyled, orderingWithinWorkout - 1));
                         items.add(Html.fromHtml(copyStyled));
 
                         adapter.notifyItemInserted(items.size());
@@ -161,14 +171,15 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
                 prevExercise = name;
                 copyStyled = styledText;
 
-                if (!same && i != 0) {
+                if (!same && i != 0 && i == exercises.length() - 1) {
                     exerciseDetails.add(new ExerciseItem(styledText, orderingWithinWorkout));
                     items.add(Html.fromHtml(styledText));
 
                     adapter.notifyItemInserted(items.size());
                 }
 
-                if (i == exercises.length() - 1 && count == exercises.length()) {
+                if ((i == exercises.length() - 1 && count == exercises.length()) ||
+                        (i == exercises.length() - 1 && count != 1)) {
                     exerciseDetails.add(new ExerciseItem(copyStyled, orderingWithinWorkout));
                     items.add(Html.fromHtml(copyStyled));
 

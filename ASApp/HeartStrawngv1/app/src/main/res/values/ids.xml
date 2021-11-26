@@ -5,4 +5,5 @@
     <item name="minutes_input" type="id" />
     <item name="distance_choice" type="id" />
     <item name="saved_workouts_table" type="id" />
+    <item name="schedule_workout_icon" type="id" />
 </resources>

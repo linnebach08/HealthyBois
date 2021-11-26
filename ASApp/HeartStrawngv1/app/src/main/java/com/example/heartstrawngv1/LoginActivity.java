@@ -3,8 +3,10 @@ package com.example.heartstrawngv1;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 
 import android.animation.ObjectAnimator;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -325,11 +327,14 @@ public class LoginActivity extends AppCompatActivity {
         RequestQueue queue = Volley.newRequestQueue(view.getContext());
         String url = "https://heartstrawng.azurewebsites.net/user";
 
-        RelativeLayout layout = (RelativeLayout) findViewById(R.id.progress_layout);
-        Button logInButton = findViewById(R.id.log_in_btn);
-        Button newAccount = findViewById(R.id.create_new_account_btn);
+        //RelativeLayout layout = (RelativeLayout) findViewById(R.id.progress_layout);
+        //Button logInButton = findViewById(R.id.log_in_btn);
+        //Button newAccount = findViewById(R.id.create_new_account_btn);
 
-        layout.setBackgroundColor(Color.WHITE);
+        Toast loggingIn = Toast.makeText(view.getContext(), "Logging in...", Toast.LENGTH_LONG);
+        loggingIn.show();
+
+        /*layout.setBackgroundColor(Color.WHITE);
         logInButton.setVisibility(View.INVISIBLE);
         newAccount.setVisibility(View.INVISIBLE);
 
@@ -346,7 +351,7 @@ public class LoginActivity extends AppCompatActivity {
         layout.addView(progressBar);
         layout.addView(loadingText);
 
-        layout.bringToFront();
+        layout.bringToFront();*/
 
         JsonObjectRequest r = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
@@ -362,9 +367,9 @@ public class LoginActivity extends AppCompatActivity {
                 } catch (Exception e) {
                     Log.d("ERROR", "Error retrieving response info");
                 }
-                ((ViewGroup) layout.getParent()).removeView(layout);
-                logInButton.setVisibility(View.VISIBLE);
-                newAccount.setVisibility(View.VISIBLE);
+                //((ViewGroup) layout.getParent()).removeView(layout);
+                //logInButton.setVisibility(View.VISIBLE);
+                //newAccount.setVisibility(View.VISIBLE);
 
                 startActivityForResult(mainIntent, 1);
                 return;
@@ -373,7 +378,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onErrorResponse(VolleyError error) {
                 Log.d("ERROR", error.toString());
-                Toast errorToast = Toast.makeText(view.getContext(), "Error, please try again", Toast.LENGTH_LONG);
+                Toast errorToast = Toast.makeText(view.getContext(), "Incorrect password, please try again", Toast.LENGTH_LONG);
                 errorToast.show();
 
             }

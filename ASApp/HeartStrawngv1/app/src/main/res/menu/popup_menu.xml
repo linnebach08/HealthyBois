@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/start_workout_option"
+        android:title="Start"
+        tools:ignore="HardcodedText" />
+
+    <item
+        android:id="@+id/schedule_workout_option"
+        android:title="Schedule"
+        tools:ignore="HardcodedText" />
+
+    <item
+        android:id="@+id/edit_workout_option"
+        android:title="Edit"
+        tools:ignore="HardcodedText" />
+
+    <item
+        android:id="@+id/add_exercise_option"
+        android:title="Add Exercise"
+        tools:ignore="HardcodedText" />
+
+    <item
+        android:id="@+id/delete_workout_option"
+        android:title="Delete"
+        tools:ignore="HardcodedText" />
+</menu>
