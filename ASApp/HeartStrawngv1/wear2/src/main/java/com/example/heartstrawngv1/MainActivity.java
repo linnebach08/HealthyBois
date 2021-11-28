@@ -14,17 +14,25 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.wear.ambient.AmbientModeSupport;
 
 import com.example.heartstrawngv1.databinding.ActivityMainBinding;
 import com.google.android.gms.tasks.Task;
@@ -41,13 +49,13 @@ import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends Activity implements SensorEventListener,
-        DataClient.OnDataChangedListener, MessageClient.OnMessageReceivedListener, CapabilityClient.OnCapabilityChangedListener {
+public class MainActivity extends Activity implements SensorEventListener{
 
     private Button mBtn;
     private ActivityMainBinding binding;
@@ -61,6 +69,32 @@ public class MainActivity extends Activity implements SensorEventListener,
     private static final UUID MY_UUID_INSECURE = UUID.fromString("8ce255c0-200a-11e0-ac64-0800200c9a66");
     BluetoothConnectionService mBluetoothConnection;
     private static final String TAG = "Watch";
+    LooperThread newL;
+
+    class LooperThread extends Thread {
+        public Handler mHandler;
+
+        public void run() {
+            Log.d(TAG, "LooperThread: Start");
+            Looper.prepare();
+
+            Log.d(TAG, "LooperThread: Handler creation");
+            mHandler = new Handler(Looper.myLooper()) {
+                @Override
+                public void handleMessage(@NonNull Message message) {
+                    //Bundle stuff = message.getData();
+                    //String requested = stuff.getString("HRRequested");
+                    if (message.what == 1) {
+                        Log.d(TAG, "In handler");
+                        startMeasure();
+                    }
+
+                }
+            };
+            Log.d(TAG, "LooperThread: Looping");
+            Looper.loop();
+        }
+    }
 
 
     // Defining Permission codes.
@@ -79,66 +113,91 @@ public class MainActivity extends Activity implements SensorEventListener,
         mHeartSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_HEART_RATE);
 
         mBtn = binding.button;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            this.setTurnScreenOn(true);
+        }
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        //Bundle extras = getIntent().getExtras();
-        //String message;
-        //try {
-        //    message = extras.getString("message");
-        //} catch (Exception e) {
-        //    message = "Nope";
-        //}
+        if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BODY_SENSORS)
+                != PackageManager.PERMISSION_GRANTED) {
 
-        //mBtn.setText(message);
+             ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BODY_SENSORS }, SENSOR_PERMISSION_CODE);
+        }
+        else {
+            mBtn.setText("Clicked");
+        }
 
-        IntentFilter newFilter = new IntentFilter(Intent.ACTION_SEND);
-        Receiver messageReceiver = new Receiver();
-
-        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, newFilter);
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        boolean created = false;
 
         if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED) {
+            Log.d("BLUE", "daboodee");
             ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BLUETOOTH }, 102);
         }
         else {
-            mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
+            pairedDevices = mBluetoothAdapter.getBondedDevices();
+            for (BluetoothDevice bt : pairedDevices) {
+                Log.d("BT", bt.getName());
+                if (bt.getName().equals("Pixel 4 XL")) {
+                    bluetoothAddress = bt.getAddress();
+                    phone = bt;
+                    newL = new LooperThread();
+                    newL.start();
+                    Log.d(TAG, "Handler " + newL.mHandler);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    mBluetoothConnection = new BluetoothConnectionService(MainActivity.this, newL.mHandler);
+                    created = true;
+                }
             }
-            else {
+        }
+
+        if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
+        }
+        else {
+            if (!created) {
                 pairedDevices = mBluetoothAdapter.getBondedDevices();
                 for (BluetoothDevice bt : pairedDevices) {
-                    if (bt.getBondState() == BluetoothDevice.BOND_BONDED) {
+                    Log.d("BT", bt.getName());
+
+                    if (bt.getName().equals("Pixel 4 XL")) {
                         bluetoothAddress = bt.getAddress();
-                        phone = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
-                        break;
+                        phone = bt;
+                        newL = new LooperThread();
+                        newL.start();
+                        Log.d(TAG, "Handler " + newL.mHandler);
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        mBluetoothConnection = new BluetoothConnectionService(MainActivity.this, newL.mHandler);
+                        created = true;
                     }
                     Log.d("BT", bt.getName());
                 }
-
             }
+
         }
 
-        if (mBluetoothAdapter == null && MainActivity.this != null) {
-            Toast.makeText(MainActivity.this, "Bluetooth not available", Toast.LENGTH_LONG).show();
-        }
-
-        mBluetoothConnection = new BluetoothConnectionService(this);
+        //LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, newFilter);
 
         mBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 startConnection();
-                //if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BODY_SENSORS)
-                //        != PackageManager.PERMISSION_GRANTED) {
-                //     ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BODY_SENSORS }, SENSOR_PERMISSION_CODE);
-                // }
-                //else {
-                //    mBtn.setText("Clicked");
-                //    startMeasure();
-                //}
+
             }
         });
+
+        if (mBluetoothAdapter == null && MainActivity.this != null) {
+            Toast.makeText(MainActivity.this, "Bluetooth not available", Toast.LENGTH_LONG).show();
+        }
 
 
         //Wearable.getDataClient(this.getContext()).addListener(this);
@@ -152,97 +211,11 @@ public class MainActivity extends Activity implements SensorEventListener,
         Log.d(TAG, "startBTConnection: Initializing RFCOM Bluetooth Connection");
 
         mBluetoothConnection.startClient(device, uuid);
+
+        //startMeasure();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        Wearable.getDataClient(this).addListener(this);
-        Wearable.getMessageClient(this).addListener(this);
-        Wearable.getCapabilityClient(this).addListener(this, Uri.parse("wear://"), CapabilityClient.FILTER_REACHABLE);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        Wearable.getDataClient(this).removeListener(this);
-        Wearable.getMessageClient(this).removeListener(this);
-        Wearable.getCapabilityClient(this).removeListener(this);
-    }
-
-    @Override
-    public void onDataChanged(@NonNull DataEventBuffer dataEventBuffer) {
-        Log.d("DATA", "onDataChanged(): " + dataEventBuffer);
-
-        for (DataEvent event : dataEventBuffer) {
-            if (event.getType() == DataEvent.TYPE_CHANGED) {
-                String path = event.getDataItem().getUri().getPath();
-                if (MessageService.COUNT_PATH.equals(path)) {
-                    DataMapItem dataMapItem = DataMapItem.fromDataItem(event.getDataItem());
-                    // Loads image on background thread.
-
-                } else {
-                    Log.d("BAD", "Unrecognized path: " + path);
-                }
-
-            } else if (event.getType() == DataEvent.TYPE_DELETED) {
-                Log.d("DELETED", "deleted");
-
-            } else {
-                Log.d(
-                        "Unknown data event type", "Type = " + event.getType());
-            }
-        }
-    }
-
-    @Override
-    public void onMessageReceived(@NonNull MessageEvent messageEvent) {
-        Log.d("MessageReceived", "OnReceived: " + messageEvent);
-    }
-
-    public class Receiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            mBtn.setText(intent.getStringExtra("message"));
-            //mBtn.setText("I just received a message from the handheld");
-        }
-    }
-
-    class SendMessage extends Thread {
-        String path;
-        String message;
-
-        SendMessage(String p, String m) {
-            path = p;
-            message = m;
-        }
-
-        public void run() {
-            Task<List<Node>> nodeListTask = Wearable.getNodeClient(getApplicationContext()).getConnectedNodes();
-            try {
-                List<Node> nodes = Tasks.await(nodeListTask);
-                for (Node node : nodes) {
-                    //mBtn.setText(node.getDisplayName());
-                    Task<Integer> sendMessageTask = Wearable.getMessageClient(MainActivity.this).sendMessage(node.getId(), path, message.getBytes());
-                    try {
-                        int result = Tasks.await(sendMessageTask);
-                        mBtn.setText("sent to " + node.getDisplayName());
-                    } catch (ExecutionException | InterruptedException e) {
-                        Log.d("ERROR", e.toString());
-                    }
-                }
-            } catch (ExecutionException | InterruptedException e) {
-                mBtn.setText(e.toString());
-                Log.d("ERROR", e.toString());
-
-            }
-        }
-    }
-
-    private void startMeasure() {
+    public void startMeasure() {
         boolean sensorRegistered = mSensorManager.registerListener(this, mHeartSensor, SensorManager.SENSOR_DELAY_FASTEST);
         Log.d("Sensor Status:", " Sensor registered: " + (sensorRegistered ? "yes" : "no"));
     }
@@ -255,34 +228,32 @@ public class MainActivity extends Activity implements SensorEventListener,
 
         //Task<Integer> sendMessageTask = Wearable.getMessageClient(this).sendMessage()
 
+        Log.d(TAG, "HR is " + Integer.toString(mHeartRate));
         mBtn.setText(Integer.toString(mHeartRate));
+        byte[] bytes = Integer.toString(mHeartRate).getBytes(Charset.defaultCharset());
+        mBluetoothConnection.write(bytes);
+        newL.interrupt();
+/*
+        pairedDevices = mBluetoothAdapter.getBondedDevices();
+        for (BluetoothDevice bt : pairedDevices) {
+            Log.d("BT", bt.getName());
+            if (bt.getName().equals("Pixel 4 XL")) {
+                bluetoothAddress = bt.getAddress();
+                phone = bt;
+                LooperThread newL = new LooperThread();
+                newL.start();
+                Log.d(TAG, "Handler " + newL.mHandler);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                mBluetoothConnection = new BluetoothConnectionService(MainActivity.this, newL.mHandler);
+            }
+        }
+*/
         stopMeasure();
     }
-
-    /*private Collection<String> getNodes() {
-        HashSet<String> results = new HashSet<>();
-
-        Task<List<Node>> nodeListTask =
-                Wearable.getNodeClient(getApplicationContext()).getConnectedNodes();
-
-        try {
-            // Block on a task and get the result synchronously (because this is on a background
-            // thread).
-            List<Node> nodes = Tasks.await(nodeListTask);
-
-            for (Node node : nodes) {
-                results.add(node.getId());
-            }
-
-        } catch (ExecutionException exception) {
-            Log.e(TAG, "Task failed: " + exception);
-
-        } catch (InterruptedException exception) {
-            Log.e(TAG, "Interrupt occurred: " + exception);
-        }
-
-        return results;
-    }*/
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
@@ -307,7 +278,7 @@ public class MainActivity extends Activity implements SensorEventListener,
 
             // Checking whether user granted the permission or not.
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startMeasure();
+                mBtn.setText("Clicked");
             }
             else {
                 Toast.makeText(MainActivity.this, "Sensor Permission Denied", Toast.LENGTH_SHORT).show();
@@ -324,14 +295,14 @@ public class MainActivity extends Activity implements SensorEventListener,
                 }
             }
             else {
-                Toast.makeText(MainActivity.this, "Bluetooth Permission Denied", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Bluetooth Permission Denied1", Toast.LENGTH_SHORT).show();
             }
         }
 
         else if (requestCode == 102) {
+
             // Checking whether user granted the permission or not.
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
                 if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.BLUETOOTH_CONNECT)
                         != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
@@ -342,6 +313,15 @@ public class MainActivity extends Activity implements SensorEventListener,
                         if (bt.getBondState() == BluetoothDevice.BOND_BONDED) {
                             bluetoothAddress = bt.getAddress();
                             phone = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
+                            newL = new LooperThread();
+                            newL.start();
+                            Log.d(TAG, "Handler " + newL.mHandler);
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            mBluetoothConnection = new BluetoothConnectionService(this, newL.mHandler);
                             break;
                         }
                         Log.d("BT", bt.getName());
@@ -350,13 +330,18 @@ public class MainActivity extends Activity implements SensorEventListener,
                 }
             }
             else {
-                Toast.makeText(MainActivity.this, "Bluetooth Permission Denied", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Bluetooth Permission Denied2", Toast.LENGTH_SHORT).show();
             }
         }
     }
-
-    @Override
-    public void onCapabilityChanged(@NonNull CapabilityInfo capabilityInfo) {
-
-    }
+    /*private final Handler mHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(@NonNull Message message) {
+            //Bundle stuff = message.getData();
+            //String requested = stuff.getString("HRRequested");
+            Log.d(TAG, "In handler");
+            startMeasure();
+            return false;
+        }
+    });*/
 }

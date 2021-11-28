@@ -8,6 +8,7 @@ import androidx.constraintlayout.widget.ConstraintSet;
 import android.animation.ObjectAnimator;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -48,6 +49,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class LoginActivity extends AppCompatActivity {
+
+    ProgressDialog p;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,6 +141,8 @@ public class LoginActivity extends AppCompatActivity {
         logInBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                p = ProgressDialog.show(view.getContext(), "Logging in", "Please wait...", true);
+
                 if (settings.contains("username")) {
                     if (!settings.getString("username", "").equals(usernameInput.getText().toString()) && rememberMe.isChecked()) {
                         SharedPreferences.Editor e = settings.edit();
@@ -331,8 +336,8 @@ public class LoginActivity extends AppCompatActivity {
         //Button logInButton = findViewById(R.id.log_in_btn);
         //Button newAccount = findViewById(R.id.create_new_account_btn);
 
-        Toast loggingIn = Toast.makeText(view.getContext(), "Logging in...", Toast.LENGTH_LONG);
-        loggingIn.show();
+        //Toast loggingIn = Toast.makeText(view.getContext(), "Logging in...", Toast.LENGTH_LONG);
+        //loggingIn.show();
 
         /*layout.setBackgroundColor(Color.WHITE);
         logInButton.setVisibility(View.INVISIBLE);
@@ -356,6 +361,7 @@ public class LoginActivity extends AppCompatActivity {
         JsonObjectRequest r = new JsonObjectRequest(Request.Method.GET, url, null, new Response.Listener<JSONObject>() {
             @Override
             public void onResponse(JSONObject response) {
+                p.dismiss();
                 Log.d("JSON", "JSON: " + response);
                 Intent mainIntent = new Intent(view.getContext(), MainActivity.class);
                 try {

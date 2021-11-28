@@ -1,24 +1,24 @@
 package com.example.heartstrawngv1;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -29,37 +29,77 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
-import com.google.android.gms.wearable.DataClient;
-import com.google.android.gms.wearable.DataEvent;
-import com.google.android.gms.wearable.DataEventBuffer;
-import com.google.android.gms.wearable.Node;
-import com.google.android.gms.wearable.Wearable;
+import com.anychart.AnyChart;
+import com.anychart.AnyChartView;
+import com.anychart.chart.common.dataentry.DataEntry;
+import com.anychart.chart.common.dataentry.ValueDataEntry;
+import com.anychart.charts.Cartesian;
+import com.anychart.core.cartesian.series.Line;
+import com.anychart.data.Mapping;
+import com.anychart.enums.Anchor;
+import com.anychart.enums.MarkerType;
+import com.anychart.graphics.vector.Stroke;
 
-import java.util.HashSet;
+import java.nio.charset.Charset;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 
-public class HeartRate extends Fragment implements DataClient.OnDataChangedListener{
+public class HeartRate extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
-    protected Handler myHandler;
     TextView heartRateLabel;
     Context context;
     private BluetoothAdapter mBluetoothAdapter = null;
-    private static final int REQUEST_ENABLE_BT = 3;
     private Set<BluetoothDevice> pairedDevices;
     private String bluetoothAddress;
     private BluetoothDevice watch;
     BluetoothConnectionService mBluetoothConnection;
     private static final String TAG = "HeartRateFrag";
     Button measureHeartrate;
+    AnyChartView graph;
+    ProgressDialog p;
+    LooperThread newL;
+    com.anychart.data.Set set;
+    boolean clicked = false;
+    boolean firstLoad = true;
+
+    class LooperThread extends Thread {
+        public Handler mHandler;
+
+        public void run() {
+            Log.d(TAG, "LooperThread: Start");
+            Looper.prepare();
+
+            Log.d(TAG, "LooperThread: Handler creation");
+            mHandler = new Handler(Looper.myLooper()) {
+                @RequiresApi(api = Build.VERSION_CODES.O)
+                @Override
+                public void handleMessage(@NonNull Message message) {
+                    if (message.what == 1) {
+                        Log.d(TAG, "In handler");
+                        //measureHeartrate.post(new Runnable() {
+
+                         //   @Override
+                         //   public void run() {
+                                updateHR(message.obj.toString());
+
+                        //    }
+                        //});
+                    }
+
+                }
+            };
+            Log.d(TAG, "LooperThread: Looping");
+            Looper.loop();
+        }
+    }
 
 
     private static final UUID MY_UUID_INSECURE = UUID.fromString("8ce255c0-200a-11e0-ac64-0800200c9a66");
@@ -101,6 +141,7 @@ public class HeartRate extends Fragment implements DataClient.OnDataChangedListe
         }
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         FragmentActivity activity = getActivity();
+        boolean created = false;
         if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED) {
              ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
@@ -109,14 +150,27 @@ public class HeartRate extends Fragment implements DataClient.OnDataChangedListe
             pairedDevices = mBluetoothAdapter.getBondedDevices();
             for (BluetoothDevice bt : pairedDevices) {
                 if (bt.getName().equals("Vapor 2 0846")) {
-                    bluetoothAddress = bt.getAddress();
-                    if (bt.getBondState() == BluetoothDevice.BOND_BONDED) {
-                        watch = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
-                        break;
-                    }
-
+                    watch = bt;
+                    created = true;
                 }
                 Log.d("BT", bt.getName());
+            }
+
+        }
+
+        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_SCAN }, 102);
+        }
+        else {
+            if (!created) {
+                pairedDevices = mBluetoothAdapter.getBondedDevices();
+                for (BluetoothDevice bt : pairedDevices) {
+                    if (bt.getName().equals("Vapor 2 0846")) {
+                        watch = bt;
+                    }
+                    Log.d("BT", bt.getName());
+                }
             }
 
         }
@@ -137,6 +191,15 @@ public class HeartRate extends Fragment implements DataClient.OnDataChangedListe
         Log.d(TAG, "startBTConnection: Initializing RFCOM Bluetooth Connection");
 
         mBluetoothConnection.startClient(device, uuid);
+
+        try {
+            Thread.sleep(4000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        byte[] bytes = "Get Heartrate".getBytes(Charset.defaultCharset());
+        mBluetoothConnection.write(bytes);
     }
 
     @Override
@@ -147,108 +210,150 @@ public class HeartRate extends Fragment implements DataClient.OnDataChangedListe
         context = getContext();
         measureHeartrate = view.findViewById(R.id.measure_heartrate_btn);
         heartRateLabel = view.findViewById(R.id.heartrate_label);
+        graph = view.findViewById(R.id.heartrate_graph_view);
+        set = com.anychart.data.Set.instantiate();
 
-        mBluetoothConnection = new BluetoothConnectionService(view.getContext());
+
+        newL = new LooperThread();
+        newL.start();
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler);
 
         measureHeartrate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startConnection();
+                p = ProgressDialog.show(context, "Getting Heart Rate", "Please wait...", true);
+                if (clicked) {
+                    byte[] bytes = "Get Heartrate".getBytes(Charset.defaultCharset());
+                    mBluetoothConnection.write(bytes);
+                }
+                else {
+                    startConnection();
+                    clicked = true;
+                }
             }
         });
 
-        myHandler = new Handler(new Handler.Callback() {
-            @Override
-            public boolean handleMessage(@NonNull Message message) {
-                Bundle stuff = message.getData();
-                messageText(stuff.getString("messageText"));
-                return false;
-            }
-        });
-
-        IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
-        Receiver messageReceiver = new Receiver();
-        LocalBroadcastManager.getInstance(this.getContext()).registerReceiver(messageReceiver, messageFilter);
-
-       // measureHeartrate.setOnClickListener(new View.OnClickListener() {
-        //    @Override
-        //    public void onClick(View view) {
-        //        talkClick(view);
-        //    }
-        //});
+        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        if (sharedPref.contains("HeartrateVals")) {
+            showGraph();
+        }
 
         return view;
     }
 
-
-    public void messageText(String newInfo) {
-        if (newInfo.compareTo("") != 0) {
-            String newHR = "Heart Rate: " + newInfo;
-            heartRateLabel.setText(newHR);
+    public void showGraph() {
+        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        String heartrateVals = sharedPref.getString("HeartrateVals", "");
+        String[] vals = heartrateVals.split(", ");
+        String[] times = new String[vals.length];
+        String[] heartrates = new String[vals.length];
+        for (int i = 0; i < vals.length; i++) {
+            String[] temp = vals[i].split(" : ");
+            times[i] = temp[0].split(" ")[1];
+            heartrates[i] = temp[1];
+            Log.d(TAG, "ShowGraph: Time: " + times[i]);
+            Log.d(TAG, "ShowGraph: HR: " + heartrates[i]);
         }
-    }
+        //graph.setProgressBar();
 
-    public class Receiver extends BroadcastReceiver {
+        Cartesian cartesian = AnyChart.line();
 
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(context, "Message Received", Toast.LENGTH_LONG).show();
-        }
-    }
+        cartesian.animation(true);
 
-    public void talkClick(View v) {
-        Toast.makeText(v.getContext(), "Sending message...", Toast.LENGTH_LONG).show();
+        cartesian.padding(10d, 20d, 5d, 20d);
 
-        new NewThread("/heartRateRequest", "Sending message...").start();
-    }
+        cartesian.crosshair().enabled(true);
 
-    public void sendMessage(String messageText) {
-        Bundle bundle = new Bundle();
-        bundle.putString("messageText", messageText);
-        Message msg = myHandler.obtainMessage();
-        msg.setData(bundle);
-        myHandler.sendMessage(msg);
-    }
+        cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
 
-    class NewThread extends Thread {
-        String path;
-        String message;
+        cartesian.title("Heart Rate History");
 
-        NewThread(String p, String m) {
-            path = p;
-            message = m;
+        cartesian.yAxis(0).title("Heart Rate");
+        cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+
+        List<DataEntry> lineVals = new ArrayList<>();
+        for (int i = 0; i < vals.length; i++) {
+
+            ValueDataEntry d = new ValueDataEntry(times[i], Double.parseDouble(heartrates[i]));
+            lineVals.add(d);
         }
 
-        public void run() {
-            Task<List<Node>> wearableList = Wearable.getNodeClient(context).getConnectedNodes();
-            try {
-                List<Node> nodes = Tasks.await(wearableList);
-                for (Node node : nodes) {
-                    Log.d("NODE", "It's " + node);
-                        Task<Integer> sendMessageTask = Wearable.getMessageClient(context).sendMessage(node.getId(), path, message.getBytes());
-                        try {
-                            int result = Tasks.await(sendMessageTask);
-                            Log.d("done", "Sent to " + node.getDisplayName());
-                            sendMessage("I just sent the wearable a message");
-                        } catch (InterruptedException | ExecutionException e) {
-                            Log.d("ERROR", e.toString());
-                        }
+        set.data(lineVals);
+        Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+        Line series1 = cartesian.line(series1Mapping);
+        series1.name("Heart Rate");
+        series1.hovered().markers().enabled(true);
+        series1.hovered().markers()
+                .type(MarkerType.CIRCLE)
+                .size(4d);
+        series1.tooltip()
+                .position("right")
+                .anchor(Anchor.LEFT_CENTER)
+                .offsetX(5d)
+                .offsetY(5d);
+
+        cartesian.legend().enabled(false);
+        cartesian.legend().fontSize(13d);
+        cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+        if (firstLoad) {
+            graph.setChart(cartesian);
+            firstLoad = false;
+        }
+
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void updateHR(String newHR) {
+        p.dismiss();
+        try {
+            heartRateLabel.setText("Heart Rate: " + newHR + " BPM");
+        } catch(Exception e) {
+
+        }
+        try {
+            SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+            SharedPreferences.Editor editor = sharedPref.edit();
+            if (sharedPref.contains("HeartrateVals")) {
+                String currHeartrates = sharedPref.getString("HeartrateVals", "");
+
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
+                LocalDateTime now = LocalDateTime.now();
+                String formattedDate = dtf.format(now);
+
+                String toAdd = currHeartrates + ", " + formattedDate + " : " + newHR;
+
+                editor.remove("HeartrateVals");
+                editor.putString("HeartrateVals", toAdd);
+            }
+            else {
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
+                LocalDateTime now = LocalDateTime.now();
+                String formattedDate = dtf.format(now);
+                String toAdd = formattedDate + " : " + newHR;
+                editor.putString("HeartrateVals", toAdd);
+            }
+            editor.apply();
+            Log.d(TAG, "HeartRate: Prefs: " + sharedPref.getString("HeartrateVals", "J"));
+
+            graph.post(new Runnable() {
+                @Override
+                public void run() {
+                    showGraph();
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                Log.d("ERROR", e.toString());
-            }
-        }
-    }
+            });
 
-    @Override
-    public void onDataChanged(@NonNull DataEventBuffer dataEventBuffer) {
-        for (DataEvent event : dataEventBuffer) {
-            if (event.getType() == DataEvent.TYPE_DELETED) {
-                Log.d("DELETED", "DataItem deleted: " + event.getDataItem().getUri());
-            } else if (event.getType() == DataEvent.TYPE_CHANGED) {
-                Log.d("CHANGED", "DataItem changed: " + event.getDataItem().getUri());
-            }
+        } catch (NullPointerException e) {
+            Log.d(TAG, "UpdateHR: " + e.getMessage());
         }
+
     }
 
     // Request Code is used to check which permission called this function.
@@ -266,6 +371,26 @@ public class HeartRate extends Fragment implements DataClient.OnDataChangedListe
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 pairedDevices = mBluetoothAdapter.getBondedDevices();
                 for (BluetoothDevice bt : pairedDevices) {
+                    Log.d("BT", bt.getName());
+                }
+            }
+            else {
+                Toast.makeText(context, "Bluetooth Permission Denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+        else if (requestCode == 102) {
+            // Checking whether user granted the permission or not.
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                pairedDevices = mBluetoothAdapter.getBondedDevices();
+                for (BluetoothDevice bt : pairedDevices) {
+                    if (bt.getName().equals("Vapor 2 0846")) {
+                        bluetoothAddress = bt.getAddress();
+                        if (bt.getBondState() == BluetoothDevice.BOND_BONDED) {
+                            watch = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
+                            break;
+                        }
+
+                    }
                     Log.d("BT", bt.getName());
                 }
             }

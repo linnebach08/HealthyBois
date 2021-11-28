@@ -1,12 +1,19 @@
 package com.example.heartstrawngv1;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.util.Log;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,10 +37,13 @@ public class BluetoothConnectionService {
     private BluetoothDevice mmDevice;
     private UUID deviceUUID;
     ProgressDialog mProgressDialog;
+    public String requestMade = "";
     private ConnectedThread mConnectedThread;
+    private final Handler mHandler;
 
-    public BluetoothConnectionService(Context context) {
+    public BluetoothConnectionService(Context context, Handler handler) {
         mContext = context;
+        mHandler = handler;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         start();
     }
@@ -194,6 +204,10 @@ public class BluetoothConnectionService {
                     bytes = mmInStream.read(buffer);
                     String incomingMessage = new String(buffer, 0, bytes);
                     Log.d(TAG, "InputStream: " + incomingMessage);
+                    if (incomingMessage.equals("Get Heartrate")) {
+                        mHandler.sendEmptyMessage(1);
+                        Log.d(TAG, "Input: requestMade set");
+                    }
                 } catch (IOException e) {
                     Log.e(TAG, "write: Error reading inputstream " + e.getMessage());
                     break;

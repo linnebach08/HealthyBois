@@ -3,17 +3,14 @@ package com.example.heartstrawngv1;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -30,7 +27,7 @@ public class ShowWorkout extends AppCompatActivity {
 
         Spinner workoutNames = findViewById(R.id.workout_list);
         Spinner exerciseNamesSpinner = findViewById(R.id.exercise_list);
-        AnyChartView chartView = findViewById(R.id.graph_view);
+        AnyChartView chartView = findViewById(R.id.heartrate_graph_view);
 
         Bundle extras = getIntent().getExtras();
         HashMap<String, ArrayList<String>> fullWorkouts;
