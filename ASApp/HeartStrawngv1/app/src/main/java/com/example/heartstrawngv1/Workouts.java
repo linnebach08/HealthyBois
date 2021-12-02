@@ -13,6 +13,7 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
 
+import android.os.Parcelable;
 import android.util.JsonReader;
 import android.util.Log;
 import android.view.Gravity;
@@ -41,6 +42,7 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Text;
 
@@ -66,6 +68,7 @@ public class Workouts extends Fragment {
     private String name;
     private ArrayList<Exercise> exercises;
     private HashMap<String, ArrayList<String>> fullWorkouts;
+    private ArrayList<String> workoutIDs;
     private LinearLayout svd;
     private View returnedView;
     private int userID;
@@ -113,6 +116,7 @@ public class Workouts extends Fragment {
         svd = view.findViewById(R.id.saved);
         returnedView = view;
         fullWorkouts = new HashMap<>();
+        workoutIDs = new ArrayList<>();
 
         Bundle extras = this.getArguments();
         String firstName;
@@ -159,17 +163,17 @@ public class Workouts extends Fragment {
                 JsonArrayRequest stringRequest = new JsonArrayRequest(Request.Method.GET, url,
                         null,
                         response -> {
-
+                            Intent showWorkoutIntent = new Intent(v.getContext(), ShowWorkout.class);
+                            showWorkoutIntent.putExtra("response", response.toString());
+                            showWorkoutIntent.putExtra("workouts", fullWorkouts);
+                            showWorkoutIntent.putExtra("workoutIDs", workoutIDs);
+                            startActivityForResult(showWorkoutIntent, 5);
                         },
                         error -> {
                             Log.d("ERROR", error.toString());
                         });
 
                 queue.add(stringRequest);
-
-                Intent showWorkoutIntent = new Intent(v.getContext(), ShowWorkout.class);
-                showWorkoutIntent.putExtra("workouts", fullWorkouts);
-                startActivityForResult(showWorkoutIntent, 5);
             }
         });
 
@@ -274,6 +278,9 @@ public class Workouts extends Fragment {
                                 exerciseNames.add(exercises.get(j).toString());
                             }
 
+                            fullWorkouts.put(workoutName, exerciseNames);
+                            workoutIDs.add(String.valueOf(workoutID));
+
                             TextView newWrk = new TextView(returnedView.getContext());
                             newWrk.setLayoutParams(new TableRow.LayoutParams(0));
                             newWrk.setTextSize(23);
@@ -326,6 +333,7 @@ public class Workouts extends Fragment {
                                                 Intent startWorkoutIntent = new Intent(view.getContext(), StartWorkout.class);
                                                 startWorkoutIntent.putExtra("exercises", exerciseNames);
                                                 startWorkoutIntent.putExtra("workoutName", workoutName);
+                                                startWorkoutIntent.putExtra("userID", userID);
                                                 startActivityForResult(startWorkoutIntent, 5);
 
                                             } else if (title.equals("Schedule")) {

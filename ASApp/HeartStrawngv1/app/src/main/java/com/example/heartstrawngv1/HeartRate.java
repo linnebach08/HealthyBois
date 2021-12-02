@@ -1,10 +1,14 @@
 package com.example.heartstrawngv1;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -29,6 +33,12 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -39,12 +49,20 @@ import com.anychart.data.Mapping;
 import com.anychart.enums.Anchor;
 import com.anychart.enums.MarkerType;
 import com.anychart.graphics.vector.Stroke;
+import com.anychart.scales.DateTime;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.nio.charset.Charset;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -63,12 +81,13 @@ public class HeartRate extends Fragment {
     BluetoothConnectionService mBluetoothConnection;
     private static final String TAG = "HeartRateFrag";
     Button measureHeartrate;
+    HeartRate.LooperThread newL;
     AnyChartView graph;
     ProgressDialog p;
-    LooperThread newL;
     com.anychart.data.Set set;
     boolean clicked = false;
     boolean firstLoad = true;
+    int userID;
 
     class LooperThread extends Thread {
         public Handler mHandler;
@@ -141,6 +160,19 @@ public class HeartRate extends Fragment {
         }
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         FragmentActivity activity = getActivity();
+
+        Bundle extras = this.getArguments();
+        if (extras != null) {
+            userID = extras.getInt("userID");
+        }
+        else {
+            userID = -1;
+        }
+
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
+        }
+
         boolean created = false;
         if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -173,10 +205,6 @@ public class HeartRate extends Fragment {
                 }
             }
 
-        }
-
-        if (mBluetoothAdapter == null && activity != null) {
-            Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
         }
 
 
@@ -239,16 +267,90 @@ public class HeartRate extends Fragment {
             }
         });
 
-        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-        if (sharedPref.contains("HeartrateVals")) {
+        //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        //if (sharedPref.contains("HeartrateVals")) {
             showGraph();
-        }
+        //}
 
         return view;
     }
 
     public void showGraph() {
-        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        RequestQueue queue = Volley.newRequestQueue(context);
+        String postUrl = "https://heartstrawng.azurewebsites.net/heart-rate/readings/" + userID;
+
+        // Request a string response from the provided URL.
+        JsonArrayRequest getHeartRateRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
+                null,
+                response -> {
+                    String[] times = new String[response.length()];
+                    int[] heartrates = new int[response.length()];
+                    for (int i = 0; i < response.length(); i++) {
+                        try {
+                            JSONObject o = response.getJSONObject(i);
+                            int heartRate = o.getInt("heartRate");
+                            String date = o.getString("readingTime");
+
+                            String[] timeSplit = date.split("T")[1].split(":");
+                            String timeToAdd = timeSplit[0] + ":" + timeSplit[1];
+
+                            heartrates[i] = heartRate;
+                            times[i] = timeToAdd;
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    Cartesian cartesian = AnyChart.line();
+                    cartesian.animation(true);
+                    cartesian.padding(10d, 20d, 5d, 20d);
+                    cartesian.crosshair().enabled(true);
+                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                    cartesian.title("Heart Rate History");
+                    cartesian.yAxis(0).title("Heart Rate");
+                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+
+                    List<DataEntry> lineVals = new ArrayList<>();
+                    for (int i = 0; i < response.length(); i++) {
+
+                        ValueDataEntry d = new ValueDataEntry(times[i], heartrates[i]);
+                        lineVals.add(d);
+                    }
+
+                    set.data(lineVals);
+                    Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                    Line series1 = cartesian.line(series1Mapping);
+                    series1.name("Heart Rate");
+                    series1.hovered().markers().enabled(true);
+                    series1.hovered().markers()
+                            .type(MarkerType.CIRCLE)
+                            .size(4d);
+                    series1.tooltip()
+                            .position("right")
+                            .anchor(Anchor.LEFT_CENTER)
+                            .offsetX(5d)
+                            .offsetY(5d);
+
+                    cartesian.legend().enabled(false);
+                    cartesian.legend().fontSize(13d);
+                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+                    if (firstLoad) {
+                        graph.setChart(cartesian);
+                        firstLoad = false;
+                    }
+                }, error -> {
+            Log.d("ERROR", error.toString());
+
+        });
+
+        getHeartRateRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        // Add the request to the RequestQueue.
+        queue.add(getHeartRateRequest);
+
+        /*SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
         String heartrateVals = sharedPref.getString("HeartrateVals", "");
         String[] vals = heartrateVals.split(", ");
         String[] times = new String[vals.length];
@@ -257,56 +359,8 @@ public class HeartRate extends Fragment {
             String[] temp = vals[i].split(" : ");
             times[i] = temp[0].split(" ")[1];
             heartrates[i] = temp[1];
-            Log.d(TAG, "ShowGraph: Time: " + times[i]);
-            Log.d(TAG, "ShowGraph: HR: " + heartrates[i]);
-        }
+        }*/
         //graph.setProgressBar();
-
-        Cartesian cartesian = AnyChart.line();
-
-        cartesian.animation(true);
-
-        cartesian.padding(10d, 20d, 5d, 20d);
-
-        cartesian.crosshair().enabled(true);
-
-        cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-
-        cartesian.title("Heart Rate History");
-
-        cartesian.yAxis(0).title("Heart Rate");
-        cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
-
-        List<DataEntry> lineVals = new ArrayList<>();
-        for (int i = 0; i < vals.length; i++) {
-
-            ValueDataEntry d = new ValueDataEntry(times[i], Double.parseDouble(heartrates[i]));
-            lineVals.add(d);
-        }
-
-        set.data(lineVals);
-        Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
-
-        Line series1 = cartesian.line(series1Mapping);
-        series1.name("Heart Rate");
-        series1.hovered().markers().enabled(true);
-        series1.hovered().markers()
-                .type(MarkerType.CIRCLE)
-                .size(4d);
-        series1.tooltip()
-                .position("right")
-                .anchor(Anchor.LEFT_CENTER)
-                .offsetX(5d)
-                .offsetY(5d);
-
-        cartesian.legend().enabled(false);
-        cartesian.legend().fontSize(13d);
-        cartesian.legend().padding(0d, 0d, 10d, 0d);
-
-        if (firstLoad) {
-            graph.setChart(cartesian);
-            firstLoad = false;
-        }
 
     }
 
@@ -318,39 +372,59 @@ public class HeartRate extends Fragment {
         } catch(Exception e) {
 
         }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        LocalDateTime now = LocalDateTime.now();
+        String formattedDate = formatter.format(now);
+
         try {
-            SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-            SharedPreferences.Editor editor = sharedPref.edit();
-            if (sharedPref.contains("HeartrateVals")) {
-                String currHeartrates = sharedPref.getString("HeartrateVals", "");
+            RequestQueue queue = Volley.newRequestQueue(context);
+            String postUrl = "https://heartstrawng.azurewebsites.net/heart-rate/readings/" + userID;
+            JSONObject o = new JSONObject();
+            try {
+                o.put("heartRate", Integer.parseInt(newHR));
+                o.put("readingTime", formattedDate);
 
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-                LocalDateTime now = LocalDateTime.now();
-                String formattedDate = dtf.format(now);
-
-                String toAdd = currHeartrates + ", " + formattedDate + " : " + newHR;
-
-                editor.remove("HeartrateVals");
-                editor.putString("HeartrateVals", toAdd);
+            } catch (JSONException e) {
+                Log.d("JSONERR", e.toString());
             }
-            else {
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-                LocalDateTime now = LocalDateTime.now();
-                String formattedDate = dtf.format(now);
-                String toAdd = formattedDate + " : " + newHR;
-                editor.putString("HeartrateVals", toAdd);
-            }
-            editor.apply();
-            Log.d(TAG, "HeartRate: Prefs: " + sharedPref.getString("HeartrateVals", "J"));
 
-            graph.post(new Runnable() {
-                @Override
-                public void run() {
-                    showGraph();
-                }
+            JSONArray toSend = new JSONArray();
+            JSONArray temp = new JSONArray();
+            temp.put("");
+            toSend.put(o);
+            //Log.d("BODY", "Body is " + o);
+            JSONObject o2= toSend.toJSONObject(temp);
+
+            Log.d("BODY", "Body is " + o2);
+            // Request a string response from the provided URL.
+            JsonArrayRequest postHeartRateRequest = new JsonArrayRequest(Request.Method.POST, postUrl,
+                    toSend,
+                    response -> {
+                        graph.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                showGraph();
+                            }
+                        });
+
+                    }, error -> {
+                graph.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showGraph();
+                    }
+                });
+
             });
 
-        } catch (NullPointerException e) {
+            postHeartRateRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+            // Add the request to the RequestQueue.
+            queue.add(postHeartRateRequest);
+            
+
+        } catch (NullPointerException | JSONException e) {
             Log.d(TAG, "UpdateHR: " + e.getMessage());
         }
 

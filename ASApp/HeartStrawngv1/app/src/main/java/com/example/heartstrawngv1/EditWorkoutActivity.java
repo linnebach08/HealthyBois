@@ -146,7 +146,6 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
                 if (type.equals("D")) {
                     // TODO: I just HAD to allow the user to change the units for the distance val, now I need
                     // TODO: to find a way to pass that info to this view without adding it to the database
-                    // Fuck
 
                 }
                 else if (type.equals("T")) {
