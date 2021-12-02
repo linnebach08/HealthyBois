@@ -65,7 +65,7 @@ public class ShowWorkout extends AppCompatActivity {
         String response;
         ArrayList<String> workoutIDs;
         try {
-            fullWorkouts = extras.getSerializable("workouts");
+            fullWorkouts = (HashMap<String, ArrayList<String>>) extras.getSerializable("workouts");
             response = extras.getString("response");
             workoutIDs = extras.getStringArrayList("workoutIDs");
         } catch (Exception e) {
