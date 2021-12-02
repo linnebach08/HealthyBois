@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +28,11 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.Volley;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -39,6 +43,10 @@ import com.anychart.data.Mapping;
 import com.anychart.enums.Anchor;
 import com.anychart.enums.MarkerType;
 import com.anychart.graphics.vector.Stroke;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
@@ -54,7 +62,6 @@ public class WaterIntake extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
-    private static final String ARG_PARAM3 = "param3";
     TextView waterIntakeLabel;
     Context context;
     private BluetoothAdapter mBluetoothAdapter = null;
@@ -62,14 +69,15 @@ public class WaterIntake extends Fragment {
     private String bluetoothAddress;
     private BluetoothDevice watch;
     BluetoothConnectionService mBluetoothConnection;
-    private static final String TAG = "WaterIntakeFrag";
+    private static final String TAG = "HeartRateFrag";
     Button measureWaterIntake;
+    WaterIntake.LooperThread newL;
     AnyChartView graph;
     ProgressDialog p;
-    LooperThread newL;
     com.anychart.data.Set set;
     boolean clicked = false;
     boolean firstLoad = true;
+    int userID;
 
     class LooperThread extends Thread {
         public Handler mHandler;
@@ -85,8 +93,14 @@ public class WaterIntake extends Fragment {
                 public void handleMessage(@NonNull Message message) {
                     if (message.what == 1) {
                         Log.d(TAG, "In handler");
+                        //measureHeartrate.post(new Runnable() {
 
+                        //   @Override
+                        //   public void run() {
                         updateWI(message.obj.toString());
+
+                        //    }
+                        //});
                     }
 
                 }
@@ -102,7 +116,6 @@ public class WaterIntake extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
-    private String mParam3;
 
     //private OnFragmentInteractionListener mListener;
 
@@ -119,12 +132,11 @@ public class WaterIntake extends Fragment {
      * @return A new instance of fragment HeartRate.
      */
     // TODO: Rename and change types and number of parameters
-    public static WaterIntake newInstance(String param1, String param2, String param3) {
+    public static WaterIntake newInstance(String param1, String param2) {
         WaterIntake fragment = new WaterIntake();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
-        args.putString(ARG_PARAM3, param3);
         fragment.setArguments(args);
         return fragment;
     }
@@ -135,10 +147,22 @@ public class WaterIntake extends Fragment {
         if (getArguments() != null) {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
-            mParam3 = getArguments().getString(ARG_PARAM3);
         }
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         FragmentActivity activity = getActivity();
+
+        Bundle extras = this.getArguments();
+        if (extras != null) {
+            userID = extras.getInt("userID");
+        }
+        else {
+            userID = -1;
+        }
+
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
+        }
+
         boolean created = false;
         if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -171,10 +195,6 @@ public class WaterIntake extends Fragment {
                 }
             }
 
-        }
-
-        if (mBluetoothAdapter == null && activity != null) {
-            Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
         }
 
 
@@ -225,7 +245,7 @@ public class WaterIntake extends Fragment {
         measureWaterIntake.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                p = ProgressDialog.show(context, "Getting Heart Rate", "Please wait...", true);
+                p = ProgressDialog.show(context, "Getting Water Intake", "Please wait...", true);
                 if (clicked) {
                     byte[] bytes = "Get Water Intake".getBytes(Charset.defaultCharset());
                     mBluetoothConnection.write(bytes);
@@ -237,74 +257,106 @@ public class WaterIntake extends Fragment {
             }
         });
 
-        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-        if (sharedPref.contains("WaterIntakeVals")) {
-            showGraph();
-        }
+        //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        //if (sharedPref.contains("HeartrateVals")) {
+        showGraph();
+        //}
 
         return view;
     }
 
     public void showGraph() {
-        SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-        String waterIntakeVals = sharedPref.getString("WaterIntakeVals", "");
-        String[] vals = waterIntakeVals.split(", ");
+        RequestQueue queue = Volley.newRequestQueue(context);
+        String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
+
+        // Request a string response from the provided URL.
+        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
+                null,
+                response -> {
+                    String[] startTimes = new String[response.length()];
+                    String[] endTimes = new String[response.length()];
+                    double[] waterIntakes = new double[response.length()];
+                    for (int i = 0; i < response.length(); i++) {
+                        try {
+                            JSONObject o = response.getJSONObject(i);
+                            double waterIntake = o.getDouble("amountDrank");
+                            String date1 = o.getString("startTime");
+                            String date2 = o.getString("endTime");
+
+                            String[] timeSplitStart = date1.split("T")[1].split(":");
+                            String timeToAddStart = timeSplitStart[0] + ":" + timeSplitStart[1];
+
+                            String[] timeSplitEnd = date2.split("T")[1].split(":");
+                            String timeToAddEnd = timeSplitEnd[0] + ":" + timeSplitEnd[1];
+
+                            waterIntakes[i] = waterIntake;
+                            startTimes[i] = timeToAddStart;
+                            endTimes[i] = timeToAddEnd;
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    Cartesian cartesian = AnyChart.line();
+                    cartesian.animation(true);
+                    cartesian.padding(10d, 20d, 5d, 20d);
+                    cartesian.crosshair().enabled(true);
+                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                    cartesian.title("Water Intakes History");
+                    cartesian.yAxis(0).title("Amount Drank (fl oz)");
+                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+
+                    List<DataEntry> lineVals = new ArrayList<>();
+                    for (int i = 0; i < response.length(); i++) {
+
+                        ValueDataEntry d = new ValueDataEntry(startTimes[i], waterIntakes[i]);
+                        lineVals.add(d);
+                    }
+
+                    set.data(lineVals);
+                    Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                    Line series1 = cartesian.line(series1Mapping);
+                    series1.name("Water Intakes");
+                    series1.hovered().markers().enabled(true);
+                    series1.hovered().markers()
+                            .type(MarkerType.CIRCLE)
+                            .size(4d);
+                    series1.tooltip()
+                            .position("right")
+                            .anchor(Anchor.LEFT_CENTER)
+                            .offsetX(5d)
+                            .offsetY(5d);
+
+                    cartesian.legend().enabled(false);
+                    cartesian.legend().fontSize(13d);
+                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+                    if (firstLoad) {
+                        graph.setChart(cartesian);
+                        firstLoad = false;
+                    }
+                }, error -> {
+            Log.d("ERROR", error.toString());
+
+        });
+
+        getWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        // Add the request to the RequestQueue.
+        queue.add(getWaterIntakeRequest);
+
+        /*SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        String heartrateVals = sharedPref.getString("HeartrateVals", "");
+        String[] vals = heartrateVals.split(", ");
         String[] times = new String[vals.length];
-        String[] waterIntakes = new String[vals.length];
+        String[] heartrates = new String[vals.length];
         for (int i = 0; i < vals.length; i++) {
             String[] temp = vals[i].split(" : ");
             times[i] = temp[0].split(" ")[1];
-            waterIntakes[i] = temp[1];
-            Log.d(TAG, "ShowGraph: Time: " + times[i]);
-            Log.d(TAG, "ShowGraph: WI: " + waterIntakes[i]);
-        }
+            heartrates[i] = temp[1];
+        }*/
         //graph.setProgressBar();
-
-        Cartesian cartesian = AnyChart.line();
-
-        cartesian.animation(true);
-
-        cartesian.padding(10d, 20d, 5d, 20d);
-
-        cartesian.crosshair().enabled(true);
-
-        cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-
-        cartesian.title("Water Intake History");
-
-        cartesian.yAxis(0).title("Water Drank (fl. oz)");
-        cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
-
-        List<DataEntry> lineVals = new ArrayList<>();
-        for (int i = 0; i < vals.length; i++) {
-
-            ValueDataEntry d = new ValueDataEntry(times[i], Double.parseDouble(waterIntakes[i]));
-            lineVals.add(d);
-        }
-
-        set.data(lineVals);
-        Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
-
-        Line series1 = cartesian.line(series1Mapping);
-        series1.name("Water Drank");
-        series1.hovered().markers().enabled(true);
-        series1.hovered().markers()
-                .type(MarkerType.CIRCLE)
-                .size(4d);
-        series1.tooltip()
-                .position("right")
-                .anchor(Anchor.LEFT_CENTER)
-                .offsetX(5d)
-                .offsetY(5d);
-
-        cartesian.legend().enabled(false);
-        cartesian.legend().fontSize(13d);
-        cartesian.legend().padding(0d, 0d, 10d, 0d);
-
-        if (firstLoad) {
-            graph.setChart(cartesian);
-            firstLoad = false;
-        }
 
     }
 
@@ -316,40 +368,60 @@ public class WaterIntake extends Fragment {
         } catch(Exception e) {
 
         }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        LocalDateTime now = LocalDateTime.now();
+        String formattedDate = formatter.format(now);
+
         try {
-            SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-            SharedPreferences.Editor editor = sharedPref.edit();
-            if (sharedPref.contains("WaterIntakeVals")) {
-                String currWaterIntakes = sharedPref.getString("WaterIntakeVals", "");
-
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-                LocalDateTime now = LocalDateTime.now();
-                String formattedDate = dtf.format(now);
-
-                String toAdd = currWaterIntakes + ", " + formattedDate + " : " + newWI;
-
-                editor.remove("WaterIntakeVals");
-                editor.putString("WaterIntakeVals", toAdd);
+            RequestQueue queue = Volley.newRequestQueue(context);
+            String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
+            JSONObject o = new JSONObject();
+            try {
+                o.put("amountDrank", Integer.parseInt(newWI));
+                o.put("startTime", formattedDate);
+                o.put("endTime", formattedDate);
+            } catch (JSONException e) {
+                Log.d("JSONERR", e.toString());
             }
-            else {
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
-                LocalDateTime now = LocalDateTime.now();
-                String formattedDate = dtf.format(now);
-                String toAdd = formattedDate + " : " + newWI;
-                editor.putString("WaterIntakeVals", toAdd);
-            }
-            editor.apply();
-            Log.d(TAG, "WaterIntake: Prefs: " + sharedPref.getString("WaterIntake", "J"));
 
-            graph.post(new Runnable() {
-                @Override
-                public void run() {
-                    showGraph();
-                }
+            JSONArray toSend = new JSONArray();
+            JSONArray temp = new JSONArray();
+            temp.put("");
+            toSend.put(o);
+            //Log.d("BODY", "Body is " + o);
+            JSONObject o2= toSend.toJSONObject(temp);
+
+            Log.d("BODY", "Body is " + o2);
+            // Request a string response from the provided URL.
+            JsonArrayRequest postWaterIntakeRequest = new JsonArrayRequest(Request.Method.POST, postUrl,
+                    toSend,
+                    response -> {
+                        graph.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                showGraph();
+                            }
+                        });
+
+                    }, error -> {
+                graph.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showGraph();
+                    }
+                });
+
             });
 
-        } catch (NullPointerException e) {
-            Log.d(TAG, "UpdateWI: " + e.getMessage());
+            postWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+            // Add the request to the RequestQueue.
+            queue.add(postWaterIntakeRequest);
+
+
+        } catch (NullPointerException | JSONException e) {
+            Log.d(TAG, "UpdateHR: " + e.getMessage());
         }
 
     }
