@@ -46,6 +46,7 @@ public class ShowWorkout extends AppCompatActivity {
     AnyChartView chartView;
     Marker marker;
     boolean firstLoad = true;
+    private static final String TAG = "ShowWorkout";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +65,7 @@ public class ShowWorkout extends AppCompatActivity {
         String response;
         ArrayList<String> workoutIDs;
         try {
-            fullWorkouts = (HashMap<String, ArrayList<String>>) extras.getSerializable("workouts");
+            fullWorkouts = extras.getSerializable("workouts");
             response = extras.getString("response");
             workoutIDs = extras.getStringArrayList("workoutIDs");
         } catch (Exception e) {
@@ -80,8 +81,10 @@ public class ShowWorkout extends AppCompatActivity {
             responseArray = new JSONArray();
             e.printStackTrace();
         }
-
+        Log.d(TAG, "FullWorkoutsKeys " + fullWorkouts.keySet());
+        Log.d(TAG, "FullWorkouts " + fullWorkouts);
         ArrayList<String> workoutNamesList = new ArrayList<>(fullWorkouts.keySet());
+        Log.d(TAG, "WorkoutNamesList " + workoutNamesList);
         final int[] currWorkoutId = new int[1];
         HashMap<String, ArrayList<String>> currentWeightVals = new HashMap<>();
         HashMap<String, ArrayList<String>> currentRepsVals = new HashMap<>();
@@ -100,6 +103,9 @@ public class ShowWorkout extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String workoutName = parent.getItemAtPosition(position).toString();
                 currWorkoutId[0] = Integer.parseInt(finalWorkoutIDs.get(position));
+                Log.d(TAG, "FinalWorkoutIds: " + finalWorkoutIDs);
+                Log.d(TAG, "Position: " + position);
+                Log.d(TAG, "CurrWorkoutId: " + currWorkoutId[0]);
 
                 weightVals.clear();
                 repsVals.clear();
@@ -111,6 +117,7 @@ public class ShowWorkout extends AppCompatActivity {
                 for (int i = 0; i < finalFullWorkouts.get(workoutName).size(); i++) {
                     try {
                         JSONObject o = new JSONObject(finalFullWorkouts.get(workoutName).get(i));
+                        Log.d("ShowWorkout", "Current Object: " + o);
                         if (i == 0) {
                             exerciseNames.add(o.getString("exercise"));
                             prev = o.getString("exercise");
@@ -125,8 +132,12 @@ public class ShowWorkout extends AppCompatActivity {
                         }
                         else {
                             if (!prev.equals(o.getString("exercise"))) {
-                                currentWeightVals.put(prev, weightVals);
-                                currentRepsVals.put(prev, repsVals);
+                                ArrayList<String> tempWeights = new ArrayList<>(weightVals);
+                                ArrayList<String> tempReps = new ArrayList<>(repsVals);
+                                currentWeightVals.put(prev, tempWeights);
+                                currentRepsVals.put(prev, tempReps);
+                                Log.d(TAG, "CurrentWeightVals1 " + currentWeightVals);
+                                Log.d(TAG, "CurrentRepsVals1 " + currentRepsVals);
                                 weightVals.clear();
                                 repsVals.clear();
                                 exerciseNames.add(o.getString("exercise"));
@@ -152,14 +163,17 @@ public class ShowWorkout extends AppCompatActivity {
                             }
                         }
 
-                        if (i == finalFullWorkouts.get(workoutName).size() - 1 && currentWeightVals.size() == 0) {
+                        if (i == finalFullWorkouts.get(workoutName).size() - 1) {
                             currentWeightVals.put(prev, weightVals);
                             currentRepsVals.put(prev, repsVals);
+                            Log.d(TAG, "CurrentWeightVals " + currentWeightVals);
+                            Log.d(TAG, "CurrentRepsVals " + currentRepsVals);
                         }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
                 }
+
                 ArrayAdapter<String> exerciseNameAdapter = new ArrayAdapter<String>(view.getContext(), android.R.layout.simple_spinner_item, exerciseNames);
                 exerciseNameAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 exerciseNamesSpinner.setAdapter(exerciseNameAdapter);
@@ -177,7 +191,10 @@ public class ShowWorkout extends AppCompatActivity {
                                 Log.d("SHOWWORKOUT", "name: " + exerciseName);
                                 Log.d("SHOWWORKOUT", "reps: " + currentRepsVals);
                                 Log.d("SHOWWORKOUT", "weight: " + currentWeightVals);
+                                Log.d(TAG, "Object workoutID: " + o2.getInt("workoutId"));
+                                Log.d(TAG, "Current workoutID: " + currWorkoutId[0]);
                                 if (currWorkoutId[0] == o2.getInt("workoutId")) {
+                                    Log.d(TAG, "Scheduled workout found");
                                     showGraph(exerciseName, o.getString("date"),currentRepsVals.get(exerciseName), currentWeightVals.get(exerciseName));
                                 }
                             } catch (JSONException e) {

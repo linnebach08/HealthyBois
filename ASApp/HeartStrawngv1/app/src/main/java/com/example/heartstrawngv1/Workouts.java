@@ -280,6 +280,8 @@ public class Workouts extends Fragment {
 
                             fullWorkouts.put(workoutName, exerciseNames);
                             workoutIDs.add(String.valueOf(workoutID));
+                            Log.d("Workouts", "fullWorkouts " + fullWorkouts);
+                            Log.d("Workouts", "workoutIds " + workoutIDs);
 
                             TextView newWrk = new TextView(returnedView.getContext());
                             newWrk.setLayoutParams(new TableRow.LayoutParams(0));

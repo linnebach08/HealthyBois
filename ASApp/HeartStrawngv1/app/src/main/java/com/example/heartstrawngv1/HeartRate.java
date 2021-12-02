@@ -422,7 +422,7 @@ public class HeartRate extends Fragment {
 
             // Add the request to the RequestQueue.
             queue.add(postHeartRateRequest);
-            
+
 
         } catch (NullPointerException | JSONException e) {
             Log.d(TAG, "UpdateHR: " + e.getMessage());
