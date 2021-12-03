@@ -49,6 +49,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.nio.charset.Charset;
+import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -62,12 +63,14 @@ public class WaterIntake extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
-    TextView waterIntakeLabel;
+    TextView volumeLabel;
+    TextView depthLabel;
+    TextView tempLabel;
     Context context;
     private BluetoothAdapter mBluetoothAdapter = null;
     private Set<BluetoothDevice> pairedDevices;
     private String bluetoothAddress;
-    private BluetoothDevice watch;
+    private BluetoothDevice sensor;
     BluetoothConnectionService mBluetoothConnection;
     private static final String TAG = "HeartRateFrag";
     Button measureWaterIntake;
@@ -99,8 +102,6 @@ public class WaterIntake extends Fragment {
                         //   public void run() {
                         updateWI(message.obj.toString());
 
-                        //    }
-                        //});
                     }
 
                 }
@@ -111,7 +112,7 @@ public class WaterIntake extends Fragment {
     }
 
 
-    private static final UUID MY_UUID_INSECURE = UUID.fromString("8ce255c0-200a-11e0-ac64-0800200c9a66");
+    private static final UUID MY_UUID_INSECURE = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     // TODO: Rename and change types of parameters
     private String mParam1;
@@ -159,6 +160,8 @@ public class WaterIntake extends Fragment {
             userID = -1;
         }
 
+        // Check if bluetooth is enabled
+
         if (mBluetoothAdapter == null) {
             Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
         }
@@ -171,8 +174,8 @@ public class WaterIntake extends Fragment {
         else {
             pairedDevices = mBluetoothAdapter.getBondedDevices();
             for (BluetoothDevice bt : pairedDevices) {
-                if (bt.getName().equals("Vapor 2 0846")) {
-                    watch = bt;
+                if (bt.getAddress().equals("00:21:06:BE:99:36")) {
+                    sensor = bt;
                     created = true;
                 }
                 Log.d("BT", bt.getName());
@@ -188,8 +191,8 @@ public class WaterIntake extends Fragment {
             if (!created) {
                 pairedDevices = mBluetoothAdapter.getBondedDevices();
                 for (BluetoothDevice bt : pairedDevices) {
-                    if (bt.getName().equals("Vapor 2 0846")) {
-                        watch = bt;
+                    if (bt.getAddress().equals("00:21:06:BE:99:36")) {
+                        sensor = bt;
                     }
                     Log.d("BT", bt.getName());
                 }
@@ -202,7 +205,7 @@ public class WaterIntake extends Fragment {
     }
 
     public void startConnection() {
-        startBTConnection(watch, MY_UUID_INSECURE);
+        startBTConnection(sensor, MY_UUID_INSECURE);
     }
 
     public void startBTConnection(BluetoothDevice device, UUID uuid) {
@@ -216,7 +219,7 @@ public class WaterIntake extends Fragment {
             e.printStackTrace();
         }
 
-        byte[] bytes = "Get Water Intake".getBytes(Charset.defaultCharset());
+        byte[] bytes = "c".getBytes(Charset.defaultCharset());
         mBluetoothConnection.write(bytes);
     }
 
@@ -227,7 +230,9 @@ public class WaterIntake extends Fragment {
         View view = inflater.inflate(R.layout.fragment_water_intake, container, false);
         context = getContext();
         measureWaterIntake = view.findViewById(R.id.measure_waterintake_btn);
-        waterIntakeLabel = view.findViewById(R.id.waterintake_label);
+        volumeLabel = view.findViewById(R.id.volume_label);
+        depthLabel = view.findViewById(R.id.depth_label);
+        tempLabel = view.findViewById(R.id.temp_label);
         graph = view.findViewById(R.id.waterintake_graph_view);
         set = com.anychart.data.Set.instantiate();
 
@@ -247,7 +252,7 @@ public class WaterIntake extends Fragment {
             public void onClick(View view) {
                 p = ProgressDialog.show(context, "Getting Water Intake", "Please wait...", true);
                 if (clicked) {
-                    byte[] bytes = "Get Water Intake".getBytes(Charset.defaultCharset());
+                    byte[] bytes = "c".getBytes(Charset.defaultCharset());
                     mBluetoothConnection.write(bytes);
                 }
                 else {
@@ -360,43 +365,123 @@ public class WaterIntake extends Fragment {
 
     }
 
+    /*
+    1. Send 'c'
+        sends back 'c'
+    2. Send 'w'
+        sends back 'wbot'
+    3. Send 'p'
+        sends back string (off by factor of 10) divide by 10
+        4 bytes max
+        Need to do calculation for depth and volume
+    4. Send 't'
+        sends back string for temperature (divide by 10)
+        Convert to fahrenheit
+
+    5. Send 'time'
+        formatting(HH:mm:ss) 24 hour format
+    6. Send 'date'
+        formatting(dd.mm.yyyy)
+    7. If receives something it doesn't know how to handle, send 'b'.
+ */
+    boolean pressureFound = false;
+    boolean tempFound = false;
+    public void cReceived() {
+        byte[] bytes = "w".getBytes(Charset.defaultCharset());
+        mBluetoothConnection.write(bytes);
+    }
+
+    public void wBotReceived() {
+        byte[] bytes = "p".getBytes(Charset.defaultCharset());
+        mBluetoothConnection.write(bytes);
+    }
+
+    double volume = 0;
+    public void dataReceived(String data) {
+        if (pressureFound && !tempFound) {
+            Log.d(TAG, "Data: " + data);
+            double converted = Double.parseDouble(data) / 10;
+            double depth_meters = (converted * 100)/(9.8066 * 997.0474);
+            double r = 38.1;
+            volume = Math.PI * Math.pow(r,2) * depth_meters;
+
+            Log.d(TAG, "Depth: " + depth_meters);
+            Log.d(TAG, "Vol: " + volume);
+
+            DecimalFormat df = new DecimalFormat("0.00000");
+            volumeLabel.setText("Volume: " + df.format(volume) + " ml");
+            depthLabel.setText("Depth: " + df.format(depth_meters) + " meters");
+
+
+
+            byte[] bytes = "t".getBytes(Charset.defaultCharset());
+            mBluetoothConnection.write(bytes);
+        }
+        else {
+            double scaled = ((Double.parseDouble(data) / 10));
+            double converted = (scaled * 1.8) + 32;
+            DecimalFormat df = new DecimalFormat("0.00");
+
+            tempLabel.setText("Temperature: " + df.format(converted) + " F");
+            tempFound = true;
+        }
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void updateWI(String newWI) {
-        p.dismiss();
-        try {
-            waterIntakeLabel.setText("Water Intake: " + newWI + " fl oz");
-        } catch(Exception e) {
-
+        if (newWI.equals("") || newWI.equals("\n") || newWI.equals("\r") || newWI.equals("\r\n") || newWI.equals("b")) {
+            return;
         }
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        LocalDateTime now = LocalDateTime.now();
-        String formattedDate = formatter.format(now);
-
-        try {
-            RequestQueue queue = Volley.newRequestQueue(context);
-            String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
-            JSONObject o = new JSONObject();
-            try {
-                o.put("amountDrank", Integer.parseInt(newWI));
-                o.put("startTime", formattedDate);
-                o.put("endTime", formattedDate);
-            } catch (JSONException e) {
-                Log.d("JSONERR", e.toString());
+        if (newWI.equals("c")) {
+            cReceived();
+        }
+        else if (newWI.equals("wbot")) {
+            wBotReceived();
+        }
+        else {
+            if (!pressureFound) {
+                pressureFound = true;
             }
+            else {
+                pressureFound = false;
+                p.dismiss();
 
-            JSONArray toSend = new JSONArray();
-            JSONArray temp = new JSONArray();
-            temp.put("");
-            toSend.put(o);
-            //Log.d("BODY", "Body is " + o);
-            JSONObject o2= toSend.toJSONObject(temp);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                LocalDateTime now = LocalDateTime.now();
+                String formattedDate = formatter.format(now);
 
-            Log.d("BODY", "Body is " + o2);
-            // Request a string response from the provided URL.
-            JsonArrayRequest postWaterIntakeRequest = new JsonArrayRequest(Request.Method.POST, postUrl,
-                    toSend,
-                    response -> {
+                try {
+                    RequestQueue queue = Volley.newRequestQueue(context);
+                    String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
+                    JSONObject o = new JSONObject();
+                    try {
+                        o.put("amountDrank", volume);
+                        o.put("startTime", formattedDate);
+                        o.put("endTime", formattedDate);
+                    } catch (JSONException e) {
+                        Log.d("JSONERR", e.toString());
+                    }
+
+                    JSONArray toSend = new JSONArray();
+                    JSONArray temp = new JSONArray();
+                    temp.put("");
+                    toSend.put(o);
+                    //Log.d("BODY", "Body is " + o);
+                    JSONObject o2= toSend.toJSONObject(temp);
+
+                    Log.d("BODY", "Body is " + o2);
+                    // Request a string response from the provided URL.
+                    JsonArrayRequest postWaterIntakeRequest = new JsonArrayRequest(Request.Method.POST, postUrl,
+                            toSend,
+                            response -> {
+                                graph.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showGraph();
+                                    }
+                                });
+
+                            }, error -> {
                         graph.post(new Runnable() {
                             @Override
                             public void run() {
@@ -404,26 +489,20 @@ public class WaterIntake extends Fragment {
                             }
                         });
 
-                    }, error -> {
-                graph.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        showGraph();
-                    }
-                });
+                    });
 
-            });
+                    postWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
-            postWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
-
-            // Add the request to the RequestQueue.
-            queue.add(postWaterIntakeRequest);
+                    // Add the request to the RequestQueue.
+                    queue.add(postWaterIntakeRequest);
 
 
-        } catch (NullPointerException | JSONException e) {
-            Log.d(TAG, "UpdateHR: " + e.getMessage());
+                } catch (NullPointerException | JSONException e) {
+                    Log.d(TAG, "UpdateHR: " + e.getMessage());
+                }
+            }
+            dataReceived(newWI);
         }
-
     }
 
     // Request Code is used to check which permission called this function.
@@ -456,7 +535,7 @@ public class WaterIntake extends Fragment {
                     if (bt.getName().equals("Vapor 2 0846")) {
                         bluetoothAddress = bt.getAddress();
                         if (bt.getBondState() == BluetoothDevice.BOND_BONDED) {
-                            watch = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
+                            sensor = mBluetoothAdapter.getRemoteDevice(bluetoothAddress);
                             break;
                         }
 

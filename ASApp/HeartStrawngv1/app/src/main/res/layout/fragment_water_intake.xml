@@ -17,27 +17,57 @@
             android:id="@+id/measure_waterintake_btn"
             android:layout_width="157dp"
             android:layout_height="68dp"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="140dp"
             android:layout_weight="2"
             android:background="@color/colorAccent"
             android:text="Measure Water Intake"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.062"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/waterintake_label" />
+            app:layout_constraintTop_toBottomOf="@+id/volume_label" />
 
         <TextView
-            android:id="@+id/waterintake_label"
-            android:layout_width="372dp"
-            android:layout_height="34dp"
-            android:layout_marginTop="44dp"
+            android:id="@+id/volume_label"
+            android:layout_width="293dp"
+            android:layout_height="63dp"
+            android:layout_marginTop="36dp"
             android:layout_weight="1"
             android:gravity="start"
-            android:text="Water Intake:"
+            android:text="Volume:"
             android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.41"
+            app:layout_constraintHorizontal_bias="0.093"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/temp_label"
+            android:layout_width="293dp"
+            android:layout_height="63dp"
+            android:layout_marginTop="164dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:text="Temperature:"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.093"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/depth_label"
+            android:layout_width="293dp"
+            android:layout_height="63dp"
+            android:layout_marginTop="100dp"
+            android:layout_weight="1"
+            android:gravity="start"
+            android:text="Depth:"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.093"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 

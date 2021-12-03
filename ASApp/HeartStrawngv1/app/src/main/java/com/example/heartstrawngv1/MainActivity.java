@@ -121,10 +121,13 @@ public class MainActivity extends AppCompatActivity {
         Fragment hFragment = new HeartRate();
         hFragment.setArguments(extras);
 
+        Fragment waterFragment = new WaterIntake();
+        waterFragment.setArguments(extras);
+
         // add the fragments
         viewPagerAdapter.add(wFragment, "Workouts");
         viewPagerAdapter.add(hFragment, "HeartRate");
-        viewPagerAdapter.add(new WaterIntake(), "Water Intake");
+        viewPagerAdapter.add(waterFragment, "Water Intake");
 
         // Set the adapter
         viewPager.setAdapter(viewPagerAdapter);
