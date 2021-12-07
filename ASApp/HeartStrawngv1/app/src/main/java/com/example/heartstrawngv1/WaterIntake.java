@@ -307,7 +307,7 @@ public class WaterIntake extends Fragment {
                     cartesian.padding(10d, 20d, 5d, 20d);
                     cartesian.crosshair().enabled(true);
                     cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-                    cartesian.title("Water Intakes History");
+                    cartesian.title("Water Intake History");
                     cartesian.yAxis(0).title("Amount Drank (fl oz)");
                     cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
@@ -322,7 +322,7 @@ public class WaterIntake extends Fragment {
                     Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
 
                     Line series1 = cartesian.line(series1Mapping);
-                    series1.name("Water Intakes");
+                    series1.name("Water Intake");
                     series1.hovered().markers().enabled(true);
                     series1.hovered().markers()
                             .type(MarkerType.CIRCLE)

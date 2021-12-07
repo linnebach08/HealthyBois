@@ -18,6 +18,7 @@ import com.android.volley.toolbox.Volley;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.text.Spanned;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -81,7 +82,6 @@ public class AddWorkoutActivity extends AppCompatActivity {
             userID = -1;
         }
         RelativeLayout layout = findViewById(R.id.progress_layout);
-
 
         Button goBackBtn = (Button) findViewById(R.id.create_workout_back_button);
 
@@ -318,7 +318,7 @@ public class AddWorkoutActivity extends AppCompatActivity {
                                     maxID = (int) entry.getValue();
                                 }
                                 else if (entry.getKey().toString().equals("password") || entry.getKey().toString().equals("rememberMe")
-                                        || entry.getKey().toString().equals("username")) {
+                                        || entry.getKey().toString().equals("username") || entry.getKey().equals("HeartrateVals")) {
                                     continue;
                                 }
                                 else {
@@ -480,6 +480,7 @@ public class AddWorkoutActivity extends AppCompatActivity {
                 boolean timeBased = data.getBooleanExtra("timeBased", false);
                 boolean distanceBased = data.getBooleanExtra("distanceBased", false);
                 ArrayList<Set> sets = (ArrayList<Set>) data.getSerializableExtra("sets");
+                ArrayList<Spanned> items = (ArrayList<Spanned>) data.getSerializableExtra("items");
 
                 for (int i = 0; i < sets.size(); i++) {
                     Exercise toAdd;

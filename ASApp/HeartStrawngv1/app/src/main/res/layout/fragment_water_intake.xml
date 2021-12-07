@@ -17,19 +17,18 @@
             android:id="@+id/measure_waterintake_btn"
             android:layout_width="157dp"
             android:layout_height="68dp"
-            android:layout_marginTop="140dp"
             android:layout_weight="2"
             android:background="@color/colorAccent"
             android:text="Measure Water Intake"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.062"
+            app:layout_constraintHorizontal_bias="0.043"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/volume_label" />
+            app:layout_constraintTop_toBottomOf="@+id/temp_label" />
 
         <TextView
             android:id="@+id/volume_label"
             android:layout_width="293dp"
-            android:layout_height="63dp"
+            android:layout_height="50dp"
             android:layout_marginTop="36dp"
             android:layout_weight="1"
             android:gravity="start"
@@ -44,8 +43,7 @@
         <TextView
             android:id="@+id/temp_label"
             android:layout_width="293dp"
-            android:layout_height="63dp"
-            android:layout_marginTop="164dp"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:gravity="start"
             android:text="Temperature:"
@@ -54,13 +52,12 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.093"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toBottomOf="@+id/depth_label" />
 
         <TextView
             android:id="@+id/depth_label"
             android:layout_width="293dp"
-            android:layout_height="63dp"
-            android:layout_marginTop="100dp"
+            android:layout_height="50dp"
             android:layout_weight="1"
             android:gravity="start"
             android:text="Depth:"
@@ -69,16 +66,16 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.093"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toBottomOf="@+id/volume_label" />
 
         <com.anychart.AnyChartView
             android:id="@+id/waterintake_graph_view"
             android:layout_width="389dp"
-            android:layout_height="485dp"
+            android:layout_height="445dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/measure_waterintake_btn"
-            app:layout_constraintVertical_bias="0.519" />
+            app:layout_constraintVertical_bias="0.0" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

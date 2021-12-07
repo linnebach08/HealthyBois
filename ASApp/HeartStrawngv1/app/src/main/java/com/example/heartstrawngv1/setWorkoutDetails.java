@@ -5,6 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -59,7 +64,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
         sets = new ArrayList<Set>();
 
         RecyclerView recyclerLayout = findViewById(R.id.saved_workouts);
-        adapter = new RecyclerListAdapter(this, items, this::onStartDrag, false);
+        adapter = new RecyclerListAdapter(this, items, this::onStartDrag, false, -1);
 
         recyclerLayout.setHasFixedSize(true);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -80,15 +85,18 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
         final String name;
         Exercise e;
         ArrayList<String> vals;
+        int workoutID;
         if (extras != null) {
             name = extras.getString("name");
             e = (Exercise) extras.getSerializable("fullDetails");
             vals = extras.getStringArrayList("setInfo");
+            workoutID = extras.getInt("workoutID");
         }
         else {
             name = "Error";
             e = null;
             vals = new ArrayList<>();
+            workoutID = -1;
         }
 
         TextView title = (TextView) findViewById(R.id.workout_name);
@@ -448,7 +456,86 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
             finishedBtn.setBackgroundResource(R.color.colorAccent);
             finishedBtn.setClickable(true);
             for (String set : vals) {
-                String styledText = "<strong> " + set + " </strong>";
+                String styledText = "<strong>" + set + " </strong>";
+
+                double weightVal = 0;
+                int repsVal = 0;
+                int timeVal = 0;
+                double distanceVal = 0;
+                if (e.weightUsed && e.repsBased) {
+                    String[] splitSet = set.split(" x ");
+                    weightVal = Double.parseDouble(splitSet[1].split(" lbs")[0]);
+                    repsVal = Integer.parseInt(splitSet[0]);
+                }
+                else if (e.timeBased && e.distanceBased) {
+                    String[] splitSet = set.split(" / ");
+                    if (splitSet.length > 1) {
+                        distanceVal = Double.parseDouble(splitSet[1].substring(0, splitSet[1].length() - 4));
+                    }
+                    String[] splitTime = splitSet[0].split(":");
+                    timeVal = (Integer.parseInt(splitTime[0]) * 3600) + (Integer.parseInt(splitTime[1]) * 60) + (Integer.parseInt(splitTime[2]));
+                }
+                else if (e.timeBased && e.weightUsed) {
+                    // styledText = "<strong>" + "0:0:" + sInput + " @ " +
+                    //                                    weightInput.getText() + " lbs </strong>";
+                    String[] splitSet = set.split(" @ ");
+                    if (splitSet.length > 1) {
+                        weightVal = Double.parseDouble(splitSet[1].split(" lbs")[0]);
+                    }
+                    String[] splitTime = splitSet[0].split(":");
+                    timeVal = (Integer.parseInt(splitTime[0]) * 3600) + (Integer.parseInt(splitTime[1]) * 60) + (Integer.parseInt(splitTime[2]));
+                }
+                else if (e.distanceBased && e.weightUsed) {
+                    //"<strong>" +
+                    //      repsInput.getText() + " " + unit.getSelectedItem().toString() + " @ " + weightInput.getText() + " lbs" + " </strong>";
+
+                    String[] splitSet = set.split(" @ ");
+                    distanceVal = Double.parseDouble(splitSet[0].substring(0, splitSet[0].length() - 4));
+                    weightVal = Double.parseDouble(splitSet[1].split(" lbs")[0]);
+                }
+                else if (e.timeBased && e.repsBased) {
+                    // "<strong>" + repsInput.getText() + " / " + "0:0:" + sInput +
+                    //                                    " </strong>"; time / no reps && reps / no time && reps and time
+
+                    String[] splitSet = set.split(" / ");
+                    if (splitSet.length > 1) {
+                        repsVal = Integer.parseInt(splitSet[0]);
+                        String[] splitTime = splitSet[1].split(":");
+                        timeVal = (Integer.parseInt(splitTime[0]) * 3600) + (Integer.parseInt(splitTime[1]) * 60) + (Integer.parseInt(splitTime[2]));
+                    }
+                    String[] splitFirst = splitSet[0].split(":");
+                    if (splitFirst.length > 1) {
+                        timeVal = (Integer.parseInt(splitFirst[0]) * 3600) + (Integer.parseInt(splitFirst[1]) * 60) + (Integer.parseInt(splitFirst[2]));
+                    }
+                    else {
+                        repsVal = Integer.parseInt(splitSet[0]);
+                    }
+                }
+                else if (e.repsBased && e.distanceBased) {
+                    //"<strong>" + repsInput.getText() + " / " + weightInput.getText() + " " + choice + " </strong>";
+
+                    String[] splitSet = set.split(" / ");
+                    if (splitSet.length > 1) {
+                        repsVal = Integer.parseInt(splitSet[0]);
+                        distanceVal = Double.parseDouble(splitSet[1].substring(0, splitSet[1].length() - 4));
+                    }
+
+                    String[] splitFirst = splitSet[0].split(" ");
+                    if (splitFirst.length > 1) {
+                        distanceVal = Double.parseDouble(splitSet[0].substring(0, splitSet[0].length() - 4));
+                    }
+                    else {
+                        repsVal = Integer.parseInt(splitSet[0]);
+                    }
+
+                }
+                else {
+                    String[] splitTime = set.split(":");
+                    timeVal = (Integer.parseInt(splitTime[0]) * 3600) + (Integer.parseInt(splitTime[1]) * 60) + (Integer.parseInt(splitTime[2]));
+                }
+
+                Set newSet = new Set(styledText, weightVal, repsVal, timeVal, distanceVal);
+                sets.add(newSet);
 
                 items.add(Html.fromHtml(styledText));
                 adapter.notifyItemInserted(items.size());
@@ -459,22 +546,83 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
             public void onClick(View view) {
                 Intent resultIntent = new Intent();
                 ArrayList<String> result = new ArrayList<>();
-                for (int i = 0; i < items.size(); i++) {
-                    Spanned temp = items.get(i);
-                    String strTemp = temp.toString();
-                    result.add(strTemp);
+                Log.d("SetWorkout", "Items: " + items);
+                Log.d("SetWorkout", "mItems: " + adapter.getmItems());
+                Log.d("SetWorkout", "Sets: " + sets.get(0).styledText);
+                Log.d("SetWorkout", "Sets: " + sets.get(0).repsVal);
+                Log.d("SetWorkout", "Sets: " + sets.get(0).weightVal);
+
+                ArrayList<Set> newSets = sets;
+                ArrayList<Integer> toRemove = new ArrayList<>();
+                for (int i = 0; i < sets.size(); i++) {
+                    String curr = sets.get(i).styledText;
+                    String[] splitCurr = (curr.split("<strong>")[1]).split("</strong>");
+                    boolean found = false;
+                    for (int j = 0; j < items.size(); j++) {
+                        Spanned temp = items.get(j);
+                        String strTemp = temp.toString();
+                        if (strTemp.equals(splitCurr[0])) {
+                            Set tempSet = new Set(sets.get(i).styledText, sets.get(i).weightVal, sets.get(i).repsVal, sets.get(i).timeVal, sets.get(i).distanceVal);
+                            newSets.add(j, tempSet);
+                            if (j <= i) {
+                                newSets.remove(i + 1);
+                            }
+                            else {
+                                newSets.remove(i);
+                            }
+
+                            found = true;
+                        }
+                    }
+
+                    if (!found) {
+                        toRemove.add(i);
+                    }
                 }
+
+                //for (Integer i : toRemove) {
+                //    sets.remove(i);
+                //}
+                Log.d("SetWorkout", "NewSets: " + newSets.get(0).styledText);
                 // TODO: (From editWorkout) allow user to only change ordering of workout and
                 // TODO: have that be updated in the database and in the editWorkout screen
-                resultIntent.putExtra("sets", sets);
-                resultIntent.putExtra("name", name);
-                resultIntent.putExtra("repsBased", e.repsBased);
-                resultIntent.putExtra("weightBased", e.weightUsed);
-                resultIntent.putExtra("timeBased", e.timeBased);
-                resultIntent.putExtra("distanceBased", e.distanceBased);
-                resultIntent.putExtra("id", e.id);
-                setResult(Activity.RESULT_OK, resultIntent);
-                finish();
+
+                if (vals.size() == 0) {
+                    resultIntent.putExtra("items", items);
+                    resultIntent.putExtra("sets", newSets);
+                    resultIntent.putExtra("name", name);
+                    resultIntent.putExtra("repsBased", e.repsBased);
+                    resultIntent.putExtra("weightBased", e.weightUsed);
+                    resultIntent.putExtra("timeBased", e.timeBased);
+                    resultIntent.putExtra("distanceBased", e.distanceBased);
+                    resultIntent.putExtra("id", e.id);
+                    setResult(Activity.RESULT_OK, resultIntent);
+                    finish();
+                }
+                else {
+                    // APP DOESN'T HANDLE CASE WHERE ONE SET WAS ADDED AND ONE WAS DELETED
+                    // This checks if the order of the sets was changed, but no sets were added or removed
+                    if (vals.size() == items.size()) {
+                        //RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+                        //String putUrl = "https://heartstrawng.azurewebsites.net/workout/" + workoutID + "/exercise/" + ;
+
+                        // Request a string response from the provided URL.
+                        //JsonObjectRequest putWorkoutRequest = new JsonObjectRequest(Request.Method.PUT, putUrl,
+                          //      null,
+                          //      response -> {
+
+                           //     }, error -> {
+                            //Log.d("ERROR:Request", error.toString());
+
+                        //});
+
+                        //putWorkoutRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+                        // Add the request to the RequestQueue.
+                        //queue.add(putWorkoutRequest);
+                    }
+                }
+
                 //resultIntent.putExtra("sets", items);
             }
         });
@@ -575,7 +723,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         }
                         else {
                             styledText = "<strong>" +
-                                    hInput + ":" + mInput + ":" + sInput + "</strong>";
+                                    hInput + ":" + mInput + ":" + sInput + " </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
 
                         }
@@ -593,14 +741,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (noHours && noMinutes
                                 && !noSeconds) {
                             styledText = "<strong>" + "0:0:" + sInput + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = Integer.parseInt(sInput);
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
                         else if (noHours && !noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" + "0:" + mInput + ":0" + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = Integer.parseInt(mInput) * 60;
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
@@ -608,14 +756,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":0:0" + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = Integer.parseInt(hInput) * 3600;
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
                         else if (noHours && !noMinutes &&
                                 !noSeconds) {
                             styledText = "<strong>" +"0:" + mInput + ":" + sInput + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
@@ -623,7 +771,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 !noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":0:" + sInput + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + Integer.parseInt(sInput);
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
@@ -631,14 +779,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":" + mInput + ":0 @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60);
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
                         else {
                             styledText = "<strong>" +
                                     hInput + ":" + mInput + ":" + sInput + " @ " +
-                                    weightInput.getText() + " lbs</strong>";
+                                    weightInput.getText() + " lbs </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
                             weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                         }
@@ -673,7 +821,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                     else {
                         styledText = "<strong>" +
                                 repsInput.getText() + " x " + weightInput.getText() +
-                                " lbs</strong>";
+                                " lbs </strong>";
                         repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                         weightVal = Double.parseDouble(String.valueOf(weightInput.getText()));
                     }
@@ -708,7 +856,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         Spinner unit = findViewById(R.id.distance_choice);
                         styledText = "<strong>" +
                                 repsInput.getText() + " " + unit.getSelectedItem().toString() + " @ " + weightInput.getText() + " lbs" +
-                                "</strong>";
+                                " </strong>";
                         switch(unit.getSelectedItem().toString()) {
                             case "mi":
                                 distanceVal = Double.parseDouble(String.valueOf(repsInput.getText())) * 5280;
@@ -781,7 +929,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         }
                         else {
                             styledText = "<strong>" +
-                                    hInput + ":" + mInput + ":" + sInput + "</strong>";
+                                    hInput + ":" + mInput + ":" + sInput + " </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
                         }
                     }
@@ -791,7 +939,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         if (noHours && noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
                             switch(choice) {
                                 case "mi":
                                     distanceVal = Double.parseDouble(String.valueOf(weightInput.getText())) * 5280;
@@ -809,7 +957,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (noHours && noMinutes
                                 && !noSeconds) {
                             styledText = "<strong>" + "0:0:" + sInput + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
                             switch(choice) {
                                 case "mi":
                                     distanceVal = Double.parseDouble(String.valueOf(weightInput.getText())) * 5280;
@@ -828,7 +976,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (noHours && !noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" + "0:" + mInput + ":0" + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -849,7 +997,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":0:0" + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -869,7 +1017,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (noHours && !noMinutes &&
                                 !noSeconds) {
                             styledText = "<strong>" +"0:" + mInput + ":" + sInput + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -890,7 +1038,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 !noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":0:" + sInput + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -911,7 +1059,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                                 noSeconds) {
                             styledText = "<strong>" +
                                     hInput + ":" + mInput + ":0 / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -931,7 +1079,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else {
                             styledText = "<strong>" +
                                     hInput + ":" + mInput + ":" + sInput + " / " +
-                                    weightInput.getText() + " " + choice + "</strong>";
+                                    weightInput.getText() + " " + choice + " </strong>";
 
                             switch(choice) {
                                 case "mi":
@@ -1004,26 +1152,26 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         }
                         else {
                             styledText = "<strong>" +
-                                    hInput + ":" + mInput + ":" + sInput + "</strong>";
+                                    hInput + ":" + mInput + ":" + sInput + " </strong>";
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
                         }
                     }
                     else if (weightInput.getText().toString().equals("")) {
-                        styledText = "<strong>" + repsInput.getText() + "</strong>";
+                        styledText = "<strong>" + repsInput.getText() + " </strong>";
                         repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                     }
                     else {
                         if (noHours && noMinutes
                                 && !noSeconds) {
                             styledText = "<strong>" + repsInput.getText() + " / " + "0:0:" + sInput +
-                                    "</strong>";
+                                    " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = Integer.parseInt(sInput);
                         }
                         else if (noHours && !noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" + repsInput.getText() + " / " + "0:" + mInput + ":0" +
-                                    "</strong>";
+                                    " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = Integer.parseInt(mInput) * 60;
 
@@ -1031,14 +1179,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (!noHours && noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" + repsInput.getText() + " / " +
-                                    hInput + ":0:0" + "</strong>";
+                                    hInput + ":0:0" + " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = Integer.parseInt(hInput) * 3600;
 
                         }
                         else if (noHours && !noMinutes &&
                                 !noSeconds) {
-                            styledText = "<strong>" + repsInput.getText() + " / " +"0:" + mInput + ":" + sInput + "</strong>";
+                            styledText = "<strong>" + repsInput.getText() + " / " +"0:" + mInput + ":" + sInput + " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
 
@@ -1046,7 +1194,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (!noHours && noMinutes &&
                                 !noSeconds) {
                             styledText = "<strong>" + repsInput.getText() + " / " +
-                                    hInput + ":0:" + sInput + "</strong>";
+                                    hInput + ":0:" + sInput + " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = (Integer.parseInt(hInput) * 3600) + Integer.parseInt(sInput);
 
@@ -1054,14 +1202,14 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         else if (!noHours && !noMinutes &&
                                 noSeconds) {
                             styledText = "<strong>" + repsInput.getText() + " / " +
-                                    hInput + ":" + mInput + ":0</strong>";
+                                    hInput + ":" + mInput + ":0 </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60);
 
                         }
                         else {
                             styledText = "<strong>" + repsInput.getText() + " / " +
-                                    hInput + ":" + mInput + ":" + sInput + "</strong>";
+                                    hInput + ":" + mInput + ":" + sInput + " </strong>";
                             repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                             timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
 
@@ -1083,7 +1231,7 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                     else if (repsInput.getText().toString().equals("")) {
                         styledText = "<strong>" +
                                 weightInput.getText() + " " + choice +
-                                "</strong>";
+                                " </strong>";
 
                         switch(choice) {
                             case "mi":
@@ -1102,13 +1250,13 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                     else if (weightInput.getText().toString().equals("")) {
                         styledText = "<strong>" +
                                 repsInput.getText() +
-                                "</strong>";
+                                " </strong>";
                         repsVal = Integer.parseInt(String.valueOf(repsInput.getText()));
                     }
                     else {
                         styledText = "<strong>" +
                                 repsInput.getText() + " / " + weightInput.getText() + " " + choice +
-                                "</strong>";
+                                " </strong>";
 
                         switch(choice) {
                             case "mi":
@@ -1179,8 +1327,8 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                         timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60);
                     }
                     else {
-                        styledText = "<strong> " +
-                                hInput + ":" + mInput + ":" + sInput + "</strong>";
+                        styledText = "<strong>" +
+                                hInput + ":" + mInput + ":" + sInput + " </strong>";
                         timeVal = (Integer.parseInt(hInput) * 3600) + (Integer.parseInt(mInput) * 60) + Integer.parseInt(sInput);
                     }
                 }

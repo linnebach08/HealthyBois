@@ -15,11 +15,28 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.anychart.AnyChart;
+import com.anychart.chart.common.dataentry.DataEntry;
+import com.anychart.chart.common.dataentry.ValueDataEntry;
+import com.anychart.charts.Cartesian;
+import com.anychart.core.cartesian.series.Line;
+import com.anychart.data.Mapping;
+import com.anychart.enums.Anchor;
+import com.anychart.enums.MarkerType;
+import com.anychart.graphics.vector.Stroke;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class EditWorkoutActivity extends AppCompatActivity implements OnStartDragListener{
 
@@ -27,18 +44,52 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
     RecyclerListAdapter adapter;
     ArrayList<Spanned> items;
     ArrayList<ExerciseItem> exerciseDetails;
-
+    RadioButton eBtn;
+    RadioButton mBtn;
+    RadioButton hBtn;
+    EditText eName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_workout);
+        eBtn = findViewById(R.id.easyBtn);
+        mBtn = findViewById(R.id.moderateBtn);
+        hBtn = findViewById(R.id.hardBtn);
+        eName = findViewById(R.id.edit_workout_name);
 
         items = new ArrayList<>();
         exerciseDetails = new ArrayList<>();
 
+        // Gets the data sent from the previous view
+        Bundle extras = getIntent().getExtras();
+        String exerciseStrings;
+        String intensity;
+        String workoutName;
+        int workoutID;
+        JSONArray exercises;
+        if (extras != null) {
+            exerciseStrings = extras.getString("exercises");
+            workoutName = extras.getString("workoutName");
+            intensity = extras.getString("intensity");
+            workoutID = extras.getInt("workoutID");
+            try {
+                exercises = new JSONArray(exerciseStrings);
+            } catch (JSONException e) {
+                exercises = new JSONArray();
+                e.printStackTrace();
+            }
+        }
+        else {
+            exerciseStrings = "";
+            exercises = new JSONArray();
+            workoutName = "";
+            intensity = "";
+            workoutID = -1;
+        }
+
         RecyclerView recyclerLayout = findViewById(R.id.saved_exercises);
-        adapter = new RecyclerListAdapter(this, items, this::onStartDrag, true);
+        adapter = new RecyclerListAdapter(this, items, this::onStartDrag, true, workoutID);
 
         recyclerLayout.setHasFixedSize(true);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -54,44 +105,16 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
         mItemTouchHelper = new ItemTouchHelper(callback);
         mItemTouchHelper.attachToRecyclerView(recyclerLayout);
 
-        // Gets the data sent from the previous view
-        Bundle extras = getIntent().getExtras();
-        String exerciseStrings;
-        String intensity;
-        String workoutName;
-        JSONArray exercises;
-        if (extras != null) {
-            exerciseStrings = extras.getString("exercises");
-            workoutName = extras.getString("workoutName");
-            intensity = extras.getString("intensity");
-            try {
-                exercises = new JSONArray(exerciseStrings);
-            } catch (JSONException e) {
-                exercises = new JSONArray();
-                e.printStackTrace();
-            }
-        }
-        else {
-            exerciseStrings = "";
-            exercises = new JSONArray();
-            workoutName = "";
-            intensity = "";
-        }
-
-        EditText eName = findViewById(R.id.edit_workout_name);
         eName.setText(workoutName);
 
         switch(intensity) {
             case "Easy":
-                RadioButton eBtn = findViewById(R.id.easyBtn);
                 eBtn.setChecked(true);
                 break;
             case "Moderate":
-                RadioButton mBtn = findViewById(R.id.moderateBtn);
                 mBtn.setChecked(true);
                 break;
             case "Hard":
-                RadioButton hBtn = findViewById(R.id.hardBtn);
                 hBtn.setChecked(true);
                 break;
         }
@@ -194,8 +217,65 @@ public class EditWorkoutActivity extends AppCompatActivity implements OnStartDra
         finished.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                for (int i = 0; i < exerciseDetails.size(); i++) {
+                boolean intensityChanged = false;
+                String newIntensity = "";
+                if (eBtn.isChecked() && !intensity.equals("Easy")) {
+                    intensityChanged = true;
+                    newIntensity = "E";
+                }
+                else if (mBtn.isChecked() && !intensity.equals("Moderate")) {
+                    intensityChanged = true;
+                    newIntensity = "M";
+                }
+                else if (hBtn.isChecked() && !intensity.equals("Hard")) {
+                    intensityChanged = true;
+                    newIntensity = "H";
+                }
 
+                String currentName = eName.getText().toString();
+                boolean nameChanged = false;
+                if (!currentName.equals(workoutName)) {
+                    nameChanged = true;
+                }
+
+                if (nameChanged || intensityChanged) {
+                    JSONObject o = new JSONObject();
+                    if (nameChanged) {
+                        try {
+                            o.put("workoutName", currentName);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (intensityChanged) {
+                        try {
+                            o.put("intensity", newIntensity);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+                    String putUrl = "https://heartstrawng.azurewebsites.net/workout/" + workoutID;
+
+                    // Request a string response from the provided URL.
+                    JsonObjectRequest putWorkoutRequest = new JsonObjectRequest(Request.Method.PUT, putUrl,
+                            o,
+                            response -> {
+
+                            }, error -> {
+                        Log.d("ERROR:Request", error.toString());
+
+                    });
+
+                    putWorkoutRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+                    // Add the request to the RequestQueue.
+                    queue.add(putWorkoutRequest);
+                }
+                else {
+                    for (int i = 0; i < exerciseDetails.size(); i++) {
+
+                    }
                 }
             }
         });

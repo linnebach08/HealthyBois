@@ -51,16 +51,22 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private ItemViewHolder h;
     private final OnStartDragListener mDragStartListener;
     private boolean editWorkout;
+    private int workoutID;
 
     private List<android.text.Spanned> mItems = new ArrayList<android.text.Spanned>() {
     };
 
-    public RecyclerListAdapter(Context context, List<android.text.Spanned> data, OnStartDragListener dragStartListener, boolean editWorkout) {
+    public RecyclerListAdapter(Context context, List<android.text.Spanned> data, OnStartDragListener dragStartListener, boolean editWorkout, int workoutID) {
         this.mInflater = LayoutInflater.from(context);
         this.mItems = data;
         c = context;
         mDragStartListener = dragStartListener;
         this.editWorkout = editWorkout;
+        this.workoutID = workoutID;
+    }
+
+    public List<android.text.Spanned> getmItems() {
+        return this.mItems;
     }
 
     @NonNull
@@ -160,6 +166,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                                     setDetailsIntent.putExtra("name", name);
                                     setDetailsIntent.putExtra("setInfo", vals);
                                     setDetailsIntent.putExtra("fullDetails", e);
+                                    setDetailsIntent.putExtra("workoutID", workoutID);
 
                                     view.getContext().startActivity(setDetailsIntent);
                                 }catch (JSONException e){
@@ -189,10 +196,10 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     @Override
     public void onItemMove(int fromPosition, int toPosition) {
-
+        Log.d("RecyclerListAdapter", "ItemMoved: " + fromPosition + " " + toPosition);
         android.text.Spanned prev = mItems.remove(fromPosition);
         mItems.add(toPosition > fromPosition ? toPosition - 1 : toPosition, prev);
-
+        Log.d("RecyclerListAdapter", "mItems: " + mItems);
         notifyItemMoved(fromPosition, toPosition);
 
 
