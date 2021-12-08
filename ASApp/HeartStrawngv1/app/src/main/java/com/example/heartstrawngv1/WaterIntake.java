@@ -43,6 +43,7 @@ import com.anychart.data.Mapping;
 import com.anychart.enums.Anchor;
 import com.anychart.enums.MarkerType;
 import com.anychart.graphics.vector.Stroke;
+import com.anychart.scales.DateTime;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,9 +51,14 @@ import org.json.JSONObject;
 
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -272,15 +278,14 @@ public class WaterIntake extends Fragment {
 
     public void showGraph() {
         RequestQueue queue = Volley.newRequestQueue(context);
-        String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
+        String url = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
 
         // Request a string response from the provided URL.
-        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
+        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, url,
                 null,
                 response -> {
-                    String[] startTimes = new String[response.length()];
-                    String[] endTimes = new String[response.length()];
-                    double[] waterIntakes = new double[response.length()];
+                    Dictionary<String, Double> measurements = new Hashtable<>();
+                    LinkedHashSet<String> startTimes = new LinkedHashSet<>();
                     for (int i = 0; i < response.length(); i++) {
                         try {
                             JSONObject o = response.getJSONObject(i);
@@ -294,9 +299,11 @@ public class WaterIntake extends Fragment {
                             String[] timeSplitEnd = date2.split("T")[1].split(":");
                             String timeToAddEnd = timeSplitEnd[0] + ":" + timeSplitEnd[1];
 
-                            waterIntakes[i] = waterIntake;
-                            startTimes[i] = timeToAddStart;
-                            endTimes[i] = timeToAddEnd;
+                            if (waterIntake < 100000) {
+                                System.out.println("start time" + timeToAddStart + "measurement " + waterIntake + " L");
+                                measurements.put(timeToAddStart, waterIntake / 1000);
+                                startTimes.add(timeToAddStart);
+                            }
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -308,13 +315,12 @@ public class WaterIntake extends Fragment {
                     cartesian.crosshair().enabled(true);
                     cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
                     cartesian.title("Water Intakes History");
-                    cartesian.yAxis(0).title("Amount Drank (fl oz)");
+                    cartesian.yAxis(0).title("Amount Drank (L)");
                     cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
                     List<DataEntry> lineVals = new ArrayList<>();
-                    for (int i = 0; i < response.length(); i++) {
-
-                        ValueDataEntry d = new ValueDataEntry(startTimes[i], waterIntakes[i]);
+                    for (String startTime : startTimes) {
+                        ValueDataEntry d = new ValueDataEntry(startTime, measurements.get(startTime));
                         lineVals.add(d);
                     }
 
