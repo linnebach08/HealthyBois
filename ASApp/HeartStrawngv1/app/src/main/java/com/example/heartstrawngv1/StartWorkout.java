@@ -200,7 +200,7 @@ public class StartWorkout extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        mBluetoothConnection = new BluetoothConnectionService(this, newL.mHandler);
+        mBluetoothConnection = new BluetoothConnectionService(this, newL.mHandler ,false);
 
         AtomicInteger numChecked = new AtomicInteger();
 

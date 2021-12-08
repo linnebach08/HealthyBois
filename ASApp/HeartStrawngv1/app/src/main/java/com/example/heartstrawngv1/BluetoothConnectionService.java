@@ -36,10 +36,14 @@ public class BluetoothConnectionService {
     //ProgressDialog mProgressDialog;
     private ConnectedThread mConnectedThread;
     private final Handler mHandler;
+    private final boolean isWaterIntake;
+    private String partialMessage;
 
-    public BluetoothConnectionService(Context context, Handler handler) {
+    public BluetoothConnectionService(Context context, Handler handler, boolean isWaterIntake) {
         mContext = context;
         mHandler = handler;
+        this.isWaterIntake = isWaterIntake;
+        partialMessage = "";
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         start();
     }
@@ -199,13 +203,56 @@ public class BluetoothConnectionService {
 
             while(true) {
                 try {
+                    if (mmInStream.available() > 0) {
+                        Log.d(TAG, "Stuff here 1");
+                    }
                     bytes = mmInStream.read(buffer);
+                    if (mmInStream.available() > 0) {
+                        Log.d(TAG, "Stuff here 2");
+                    }
                     String incomingMessage = new String(buffer, 0, bytes);
                     Log.d(TAG, "InputStream: " + incomingMessage);
+                    String newMessage = incomingMessage;
+                    //Message m = Message.obtain(mHandler, 1, incomingMessage);
+                    //mHandler.sendMessage(m);
+                    if (isWaterIntake) {
+                        while (true) {
+                            if (newMessage.substring(newMessage.length() - 1).equals("d")) {
+                                if (partialMessage.length() != 0) {
+                                    partialMessage += newMessage;
+                                    Log.d(TAG, "Full Message: " + partialMessage);
+                                    partialMessage = partialMessage.substring(0, partialMessage.length() - 1);
+                                    Message m = Message.obtain(mHandler, 1, partialMessage);
+                                    mHandler.sendMessage(m);
+                                    partialMessage = "";
+                                    break;
+                                }
+                                else {
+                                    Log.d(TAG, "Full Message1: " + newMessage);
+                                    newMessage = newMessage.substring(0, newMessage.length() - 1);
+                                    Message m = Message.obtain(mHandler, 1, newMessage);
+                                    mHandler.sendMessage(m);
+                                    break;
+                                }
 
-                    Message m = Message.obtain(mHandler, 1, incomingMessage);
-                    mHandler.sendMessage(m);
-                } catch (IOException e) {
+                            } else {
+                                Log.d(TAG, "Message Received: " + newMessage);
+                                partialMessage += newMessage;
+                                Thread.sleep(2000);
+                                if (mmInStream.available() > 0) {
+                                    Log.d(TAG, "Stuff available");
+                                }
+                                bytes = mmInStream.read(buffer);
+                                Log.d(TAG, "Finished reading again");
+                                newMessage = new String(buffer, 0, bytes);
+                            }
+                        }
+                    }
+                    else {
+                        Message m = Message.obtain(mHandler, 1, incomingMessage);
+                        mHandler.sendMessage(m);
+                    }
+                } catch (IOException | InterruptedException e) {
                     Log.e(TAG, "write: Error reading inputstream " + e.getMessage());
                     break;
                 }

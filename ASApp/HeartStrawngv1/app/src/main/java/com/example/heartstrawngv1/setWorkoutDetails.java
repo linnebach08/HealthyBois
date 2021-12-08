@@ -552,6 +552,8 @@ public class setWorkoutDetails extends AppCompatActivity implements OnStartDragL
                 Log.d("SetWorkout", "Sets: " + sets.get(0).repsVal);
                 Log.d("SetWorkout", "Sets: " + sets.get(0).weightVal);
 
+                // This rearranges the sets data structure to match the exercise order that the user defines
+                // via the items data structure
                 ArrayList<Set> newSets = sets;
                 ArrayList<Integer> toRemove = new ArrayList<>();
                 for (int i = 0; i < sets.size(); i++) {
