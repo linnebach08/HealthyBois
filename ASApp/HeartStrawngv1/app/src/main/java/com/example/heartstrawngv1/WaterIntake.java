@@ -38,11 +38,16 @@ import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
 import com.anychart.chart.common.dataentry.ValueDataEntry;
 import com.anychart.charts.Cartesian;
+import com.anychart.core.cartesian.series.Column;
 import com.anychart.core.cartesian.series.Line;
 import com.anychart.data.Mapping;
 import com.anychart.enums.Anchor;
+import com.anychart.enums.HoverMode;
 import com.anychart.enums.MarkerType;
+import com.anychart.enums.Position;
+import com.anychart.enums.TooltipPositionMode;
 import com.anychart.graphics.vector.Stroke;
+import com.anychart.scales.DateTime;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,9 +56,14 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -263,39 +273,45 @@ public class WaterIntake extends Fragment {
 
         //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
         //if (sharedPref.contains("HeartrateVals")) {
-        showGraph();
+        showGraph(true);
         //}
 
         return view;
     }
 
-    public void showGraph() {
-        RequestQueue queue = Volley.newRequestQueue(context);
-        String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
+    public void showGraph(boolean dayView) {
+        if (dayView) {
+            showDayGraph();
+        }
+        else {
+            showWeekGraph();
+        }
+    }
 
+    public void showDayGraph() {
+        RequestQueue queue = Volley.newRequestQueue(context);;
+        String url = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID + "/day";
+        System.out.println("getting intakes " + url);
         // Request a string response from the provided URL.
-        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
+        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, url,
                 null,
                 response -> {
+                    System.out.println(response);
                     String[] startTimes = new String[response.length()];
-                    String[] endTimes = new String[response.length()];
                     double[] waterIntakes = new double[response.length()];
                     for (int i = 0; i < response.length(); i++) {
                         try {
                             JSONObject o = response.getJSONObject(i);
                             double waterIntake = o.getDouble("amountDrank");
-                            String date1 = o.getString("startTime");
-                            String date2 = o.getString("endTime");
-
-                            String[] timeSplitStart = date1.split("T")[1].split(":");
+                            String date = o.getString("startTime");
+                            System.out.println(waterIntake + date);
+                            String[] timeSplitStart = date.split("T")[1].split(":");
                             String timeToAddStart = timeSplitStart[0] + ":" + timeSplitStart[1];
 
-                            String[] timeSplitEnd = date2.split("T")[1].split(":");
-                            String timeToAddEnd = timeSplitEnd[0] + ":" + timeSplitEnd[1];
-
-                            waterIntakes[i] = waterIntake;
+                            //System.out.println("start time" + timeToAddStart + "measurement " + waterIntake + " L");
                             startTimes[i] = timeToAddStart;
-                            endTimes[i] = timeToAddEnd;
+                            waterIntakes[i] = waterIntake;
+
 
                         } catch (JSONException e) {
                             e.printStackTrace();
@@ -307,12 +323,11 @@ public class WaterIntake extends Fragment {
                     cartesian.crosshair().enabled(true);
                     cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
                     cartesian.title("Water Intake History");
-                    cartesian.yAxis(0).title("Amount Drank (fl oz)");
+                    cartesian.yAxis(0).title("Amount Drank (L)");
                     cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
                     List<DataEntry> lineVals = new ArrayList<>();
                     for (int i = 0; i < response.length(); i++) {
-
                         ValueDataEntry d = new ValueDataEntry(startTimes[i], waterIntakes[i]);
                         lineVals.add(d);
                     }
@@ -361,7 +376,94 @@ public class WaterIntake extends Fragment {
             heartrates[i] = temp[1];
         }*/
         //graph.setProgressBar();
+    }
 
+    public void showWeekGraph() {
+        RequestQueue queue = Volley.newRequestQueue(context);;
+        String url = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID + "/week";
+        System.out.println("getting intakes " + url);
+        // Request a string response from the provided URL.
+        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, url,
+                null,
+                response -> {
+                    System.out.println(response);
+                    String[] startTimes = new String[response.length()];
+                    double[] waterIntakes = new double[response.length()];
+                    for (int i = 0; i < response.length(); i++) {
+                        try {
+                            JSONObject o = response.getJSONObject(i);
+                            double waterIntake = o.getDouble("amountDrank");
+                            String date = o.getString("startTime");
+                            System.out.println(waterIntake + date);
+                            String[] dateSplitStart = date.split("T")[0].split("-");
+                            String dateToAddStart = dateSplitStart[1] + "-" + dateSplitStart[2];
+
+                            //System.out.println("start time" + timeToAddStart + "measurement " + waterIntake + " L");
+                            startTimes[i] = dateToAddStart;
+                            waterIntakes[i] = waterIntake;
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    Cartesian cartesian = AnyChart.column();
+                    cartesian.animation(true);
+                    cartesian.padding(10d, 20d, 5d, 20d);
+                    cartesian.crosshair().enabled(true);
+                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                    cartesian.title("Water Intake History");
+                    cartesian.yAxis(0).title("Amount Drank (L)");
+                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+
+                    List<DataEntry> columnVals = new ArrayList<>();
+                    for (int i = 0; i < response.length(); i++) {
+                        System.out.println(waterIntakes.length + " " + waterIntakes[0] + " " + waterIntakes[1]);
+                        ValueDataEntry d = new ValueDataEntry(startTimes[i], waterIntakes[i]);
+                        columnVals.add(d);
+                    }
+
+                    Column series1 = cartesian.column(columnVals);
+
+                    series1.hovered().markers().enabled(true);
+                    series1.hovered().markers()
+                            .type(MarkerType.CIRCLE)
+                            .size(4d);
+                    series1.tooltip()
+                            .position("right")
+                            .anchor(Anchor.LEFT_CENTER)
+                            .offsetX(5d)
+                            .offsetY(5d);
+
+                    cartesian.legend().enabled(false);
+                    cartesian.legend().fontSize(13d);
+                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+                    if (firstLoad) {
+                        graph.setChart(cartesian);
+                        firstLoad = false;
+                    }
+                }, error -> {
+            Log.d("ERROR", error.toString());
+
+        });
+
+        getWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
+
+        // Add the request to the RequestQueue.
+        queue.add(getWaterIntakeRequest);
+
+        /*SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
+        String heartrateVals = sharedPref.getString("HeartrateVals", "");
+        String[] vals = heartrateVals.split(", ");
+        String[] times = new String[vals.length];
+        String[] heartrates = new String[vals.length];
+        for (int i = 0; i < vals.length; i++) {
+            String[] temp = vals[i].split(" : ");
+            times[i] = temp[0].split(" ")[1];
+            heartrates[i] = temp[1];
+        }*/
+        //graph.setProgressBar();
     }
 
     /*
@@ -489,7 +591,7 @@ public class WaterIntake extends Fragment {
                                 graph.post(new Runnable() {
                                     @Override
                                     public void run() {
-                                        showGraph();
+                                        showGraph(true);
                                     }
                                 });
 
@@ -497,7 +599,7 @@ public class WaterIntake extends Fragment {
                         graph.post(new Runnable() {
                             @Override
                             public void run() {
-                                showGraph();
+                                showGraph(true);
                             }
                         });
 
