@@ -49,6 +49,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.text.DecimalFormat;
 import java.time.Instant;
@@ -87,6 +88,7 @@ public class WaterIntake extends Fragment {
     boolean clicked = false;
     boolean firstLoad = true;
     int userID;
+    String partialMessage = "";
 
     class LooperThread extends Thread {
         public Handler mHandler;
@@ -102,14 +104,10 @@ public class WaterIntake extends Fragment {
                 public void handleMessage(@NonNull Message message) {
                     if (message.what == 1) {
                         Log.d(TAG, "In handler");
-                        //measureHeartrate.post(new Runnable() {
-
-                        //   @Override
-                        //   public void run() {
-                        updateWI(message.obj.toString());
+                        String messageString = message.obj.toString();
+                        updateWI(messageString);
 
                     }
-
                 }
             };
             Log.d(TAG, "LooperThread: Looping");
@@ -225,7 +223,7 @@ public class WaterIntake extends Fragment {
             e.printStackTrace();
         }
 
-        byte[] bytes = "c".getBytes(Charset.defaultCharset());
+        byte[] bytes = "w".getBytes(Charset.defaultCharset());
         mBluetoothConnection.write(bytes);
     }
 
@@ -251,14 +249,14 @@ public class WaterIntake extends Fragment {
             e.printStackTrace();
         }
 
-        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler);
+        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler, true);
 
         measureWaterIntake.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 p = ProgressDialog.show(context, "Getting Water Intake", "Please wait...", true);
                 if (clicked) {
-                    byte[] bytes = "c".getBytes(Charset.defaultCharset());
+                    byte[] bytes = "w".getBytes(Charset.defaultCharset());
                     mBluetoothConnection.write(bytes);
                 }
                 else {
@@ -266,6 +264,7 @@ public class WaterIntake extends Fragment {
                     clicked = true;
                 }
             }
+
         });
 
         //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
@@ -328,7 +327,7 @@ public class WaterIntake extends Fragment {
                     Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
 
                     Line series1 = cartesian.line(series1Mapping);
-                    series1.name("Water Intakes");
+                    series1.name("Water Intake");
                     series1.hovered().markers().enabled(true);
                     series1.hovered().markers()
                             .type(MarkerType.CIRCLE)
@@ -391,11 +390,11 @@ public class WaterIntake extends Fragment {
     7. If receives something it doesn't know how to handle, send 'b'.
  */
     boolean pressureFound = false;
-    boolean tempFound = false;
-    public void cReceived() {
+    //boolean tempFound = false;
+    /*public void cReceived() {
         byte[] bytes = "w".getBytes(Charset.defaultCharset());
         mBluetoothConnection.write(bytes);
-    }
+    }*/
 
     public void wBotReceived() {
         byte[] bytes = "p".getBytes(Charset.defaultCharset());
@@ -404,7 +403,8 @@ public class WaterIntake extends Fragment {
 
     double volume = 0;
     public void dataReceived(String data) {
-        if (pressureFound && !tempFound) {
+        Log.d(TAG, "In function");
+        if (pressureFound) { //&& !tempFound) {
             Log.d(TAG, "Data: " + data);
             double converted = Double.parseDouble(data) / 10;
             double depth_meters = (converted * 100)/(9.8066 * 997.0474);
@@ -415,12 +415,20 @@ public class WaterIntake extends Fragment {
             Log.d(TAG, "Vol: " + volume);
 
             DecimalFormat df = new DecimalFormat("0.00000");
-            volumeLabel.setText("Volume: " + df.format(volume) + " ml");
-            depthLabel.setText("Depth: " + df.format(depth_meters) + " meters");
+            volumeLabel.post(new Runnable() {
+                @Override
+                public void run() {
+                    volumeLabel.setText("Volume: " + df.format(volume) + " ml");
+                }
+            });
+            depthLabel.post(new Runnable() {
+                @Override
+                public void run() {
+                    depthLabel.setText("Depth: " + df.format(depth_meters) + " meters");
+                }
+            });
 
-
-
-            byte[] bytes = "t".getBytes(Charset.defaultCharset());
+            byte[] bytes = "t-l".getBytes(Charset.defaultCharset());
             mBluetoothConnection.write(bytes);
         }
         else {
@@ -428,8 +436,14 @@ public class WaterIntake extends Fragment {
             double converted = (scaled * 1.8) + 32;
             DecimalFormat df = new DecimalFormat("0.00");
 
-            tempLabel.setText("Temperature: " + df.format(converted) + " F");
-            tempFound = true;
+            tempLabel.post(new Runnable() {
+                @Override
+                public void run() {
+                    tempLabel.setText("Temperature: " + df.format(converted) + " F");
+                }
+            });
+            pressureFound = false;
+            //tempFound = true;
         }
     }
 
@@ -438,10 +452,8 @@ public class WaterIntake extends Fragment {
         if (newWI.equals("") || newWI.equals("\n") || newWI.equals("\r") || newWI.equals("\r\n") || newWI.equals("b")) {
             return;
         }
-        if (newWI.equals("c")) {
-            cReceived();
-        }
-        else if (newWI.equals("wbot")) {
+
+        if (newWI.equals("wbot")) {
             wBotReceived();
         }
         else {
@@ -473,7 +485,7 @@ public class WaterIntake extends Fragment {
                     temp.put("");
                     toSend.put(o);
                     //Log.d("BODY", "Body is " + o);
-                    JSONObject o2= toSend.toJSONObject(temp);
+                    JSONObject o2 = toSend.toJSONObject(temp);
 
                     Log.d("BODY", "Body is " + o2);
                     // Request a string response from the provided URL.

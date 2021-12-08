@@ -1,33 +1,23 @@
 package com.example.heartstrawngv1;
 
 import android.app.Activity;
-import android.content.Context;
+import android.app.ProgressDialog;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.DividerItemDecoration;
 
-import android.os.Parcelable;
-import android.util.JsonReader;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -39,21 +29,12 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.google.android.material.tabs.TabLayout;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Array;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import javax.net.ssl.HttpsURLConnection;
 
 
 public class Workouts extends Fragment {
@@ -68,6 +49,7 @@ public class Workouts extends Fragment {
     private String name;
     private ArrayList<Exercise> exercises;
     private HashMap<String, ArrayList<String>> fullWorkouts;
+    private JSONArray fullResponse;
     private ArrayList<String> workoutIDs;
     private LinearLayout svd;
     private View returnedView;
@@ -167,10 +149,11 @@ public class Workouts extends Fragment {
                             showWorkoutIntent.putExtra("response", response.toString());
                             showWorkoutIntent.putExtra("workouts", fullWorkouts);
                             showWorkoutIntent.putExtra("workoutIDs", workoutIDs);
+                            showWorkoutIntent.putExtra("workoutResponse", fullResponse.toString());
                             startActivityForResult(showWorkoutIntent, 5);
                         },
                         error -> {
-                            Log.d("ERROR", error.toString());
+                            Log.d("ERROR1", error.toString());
                         });
 
                 queue.add(stringRequest);
@@ -261,6 +244,7 @@ public class Workouts extends Fragment {
                             svd.addView(workoutsTable);
                         }
                         TableLayout workoutList = returnedView.findViewById(R.id.saved_workouts_table);
+                        fullResponse = response;
                         for (int i = 0; i < response.length(); i++) {
                             JSONObject exercise = response.getJSONObject(i);
 
@@ -332,6 +316,7 @@ public class Workouts extends Fragment {
                                             String title = (String) menuItem.getTitle();
 
                                             if (title.equals("Start")) {
+                                                ProgressDialog.show(returnedView.getContext(), "Starting Workout", "Please wait...", true);
                                                 Intent startWorkoutIntent = new Intent(view.getContext(), StartWorkout.class);
                                                 startWorkoutIntent.putExtra("exercises", exerciseNames);
                                                 startWorkoutIntent.putExtra("workoutName", workoutName);
@@ -350,6 +335,7 @@ public class Workouts extends Fragment {
                                                 editWorkoutIntent.putExtra("exercises", exercises.toString());
                                                 editWorkoutIntent.putExtra("workoutName", workoutName);
                                                 editWorkoutIntent.putExtra("intensity", finalIntensity);
+                                                editWorkoutIntent.putExtra("workoutID", workoutID);
                                                 startActivityForResult(editWorkoutIntent, 3);
 
                                             } else if (title.equals("Add Exercise")) {
@@ -545,11 +531,11 @@ public class Workouts extends Fragment {
                         svd.removeView(loadingText);
 
                     } catch (Exception e) {
-                        Log.d("ERROR", e.toString());
+                        Log.d("ERROR2", e.toString());
                     }
                 },
                 error -> {
-                    Log.d("ERROR", error.toString());
+                    Log.d("ERROR3", error.toString());
                 });
 
         stringRequest.setRetryPolicy(new DefaultRetryPolicy( 50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));

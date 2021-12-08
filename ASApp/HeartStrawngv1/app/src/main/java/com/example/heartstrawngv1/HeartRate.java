@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,6 +74,7 @@ public class HeartRate extends Fragment {
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
     TextView heartRateLabel;
+    Spinner datesSpinner;
     Context context;
     private BluetoothAdapter mBluetoothAdapter = null;
     private Set<BluetoothDevice> pairedDevices;
@@ -240,6 +242,7 @@ public class HeartRate extends Fragment {
         heartRateLabel = view.findViewById(R.id.heartrate_label);
         graph = view.findViewById(R.id.heartrate_graph_view);
         set = com.anychart.data.Set.instantiate();
+        datesSpinner = view.findViewById(R.id.heartrate_dates_spinner);
 
 
         newL = new LooperThread();
@@ -250,7 +253,7 @@ public class HeartRate extends Fragment {
             e.printStackTrace();
         }
 
-        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler);
+        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler, false);
 
         measureHeartrate.setOnClickListener(new View.OnClickListener() {
             @Override

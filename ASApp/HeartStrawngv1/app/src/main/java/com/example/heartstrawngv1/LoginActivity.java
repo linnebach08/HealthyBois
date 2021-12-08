@@ -173,6 +173,8 @@ public class LoginActivity extends AppCompatActivity {
                     }
                 }
 
+                Log.d("logging in", username[0]);
+                Log.d("logging in", password[0]);
                 logUserIn(view, username[0], password[0]);
 
             }
