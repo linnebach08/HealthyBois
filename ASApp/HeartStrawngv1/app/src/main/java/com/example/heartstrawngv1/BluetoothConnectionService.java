@@ -124,6 +124,7 @@ public class BluetoothConnectionService {
                 mmSocket.connect();
                 Log.d(TAG, "run: ConnectThread connected");
             } catch (IOException e) {
+                Log.d(TAG, "ConnectThread: Error is " + e.getMessage());
                 try {
                     mmSocket.close();
                     Log.d(TAG, "run: Closed socket");

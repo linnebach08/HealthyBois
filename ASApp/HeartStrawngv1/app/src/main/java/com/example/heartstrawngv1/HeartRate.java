@@ -29,6 +29,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -40,6 +42,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.anychart.APIlib;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -75,6 +78,7 @@ public class HeartRate extends Fragment {
     private static final String ARG_PARAM2 = "param2";
     TextView heartRateLabel;
     Spinner datesSpinner;
+    Spinner detailedDatesSpinner;
     Context context;
     private BluetoothAdapter mBluetoothAdapter = null;
     private Set<BluetoothDevice> pairedDevices;
@@ -86,10 +90,12 @@ public class HeartRate extends Fragment {
     HeartRate.LooperThread newL;
     AnyChartView graph;
     ProgressDialog p;
-    com.anychart.data.Set set;
     boolean clicked = false;
     boolean firstLoad = true;
     int userID;
+    Cartesian cartesian;
+    String currentChoice = "";
+    String currentMonthChoice = "";
 
     class LooperThread extends Thread {
         public Handler mHandler;
@@ -175,39 +181,38 @@ public class HeartRate extends Fragment {
             Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
         }
 
-        boolean created = false;
-        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-             ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
-        }
-        else {
-            pairedDevices = mBluetoothAdapter.getBondedDevices();
-            for (BluetoothDevice bt : pairedDevices) {
-                if (bt.getName().equals("Vapor 2 0846")) {
-                    watch = bt;
-                    created = true;
-                }
-                Log.d("BT", bt.getName());
-            }
 
-        }
-
-        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_SCAN }, 102);
-        }
-        else {
-            if (!created) {
+            boolean created = false;
+            if (ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 101);
+            } else {
                 pairedDevices = mBluetoothAdapter.getBondedDevices();
                 for (BluetoothDevice bt : pairedDevices) {
                     if (bt.getName().equals("Vapor 2 0846")) {
                         watch = bt;
+                        created = true;
                     }
                     Log.d("BT", bt.getName());
                 }
+
             }
 
-        }
+            if (ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_SCAN)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.BLUETOOTH_SCAN}, 102);
+            } else {
+                if (!created) {
+                    pairedDevices = mBluetoothAdapter.getBondedDevices();
+                    for (BluetoothDevice bt : pairedDevices) {
+                        if (bt.getName().equals("Vapor 2 0846")) {
+                            watch = bt;
+                        }
+                        Log.d("BT", bt.getName());
+                    }
+                }
+
+            }
 
 
         //Wearable.getDataClient(this.getContext()).addListener(this);
@@ -223,7 +228,7 @@ public class HeartRate extends Fragment {
         mBluetoothConnection.startClient(device, uuid);
 
         try {
-            Thread.sleep(4000);
+            Thread.sleep(8000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -241,39 +246,39 @@ public class HeartRate extends Fragment {
         measureHeartrate = view.findViewById(R.id.measure_heartrate_btn);
         heartRateLabel = view.findViewById(R.id.heartrate_label);
         graph = view.findViewById(R.id.heartrate_graph_view);
-        set = com.anychart.data.Set.instantiate();
         datesSpinner = view.findViewById(R.id.heartrate_dates_spinner);
+        detailedDatesSpinner = view.findViewById(R.id.heartrate_detailed_dates_spinner);
 
-
-        newL = new LooperThread();
-        newL.start();
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(context, "Bluetooth not available", Toast.LENGTH_LONG).show();
         }
-
-        mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler, false);
-
-        measureHeartrate.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                p = ProgressDialog.show(context, "Getting Heart Rate", "Please wait...", true);
-                if (clicked) {
-                    byte[] bytes = "Get Heartrate".getBytes(Charset.defaultCharset());
-                    mBluetoothConnection.write(bytes);
-                }
-                else {
-                    startConnection();
-                    clicked = true;
-                }
+            newL = new LooperThread();
+            newL.start();
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-        });
 
-        //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
-        //if (sharedPref.contains("HeartrateVals")) {
-            showGraph();
-        //}
+            mBluetoothConnection = new BluetoothConnectionService(view.getContext(), newL.mHandler, false);
+
+            measureHeartrate.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    p = ProgressDialog.show(context, "Getting Heart Rate", "Please wait...", true);
+                    if (clicked) {
+                        byte[] bytes = "Get Heartrate".getBytes(Charset.defaultCharset());
+                        mBluetoothConnection.write(bytes);
+                    } else {
+                        startConnection();
+                        clicked = true;
+                    }
+                }
+            });
+
+
+        showGraph();
 
         return view;
     }
@@ -287,6 +292,8 @@ public class HeartRate extends Fragment {
                 null,
                 response -> {
                     String[] times = new String[response.length()];
+                    ArrayList<String> months = new ArrayList<>();
+                    ArrayList<String> days = new ArrayList<>();
                     int[] heartrates = new int[response.length()];
                     for (int i = 0; i < response.length(); i++) {
                         try {
@@ -294,55 +301,355 @@ public class HeartRate extends Fragment {
                             int heartRate = o.getInt("heartRate");
                             String date = o.getString("readingTime");
 
-                            String[] timeSplit = date.split("T")[1].split(":");
+                            String[] fullSplit = date.split("T");
+                            String[] dateSplit = fullSplit[0].split("-");
+
+                            String convMonth = convertMonth(dateSplit[1]);
+
+                            months.add(dateSplit[1]);
+
+                            if (dateSplit[2].charAt(0) == '0') {
+                                dateSplit[2] = String.valueOf(dateSplit[2].charAt(1));
+                            }
+                            
+                            days.add(convMonth + " " + dateSplit[2]);
+
+                            String[] timeSplit = fullSplit[1].split(":");
                             String timeToAdd = timeSplit[0] + ":" + timeSplit[1];
 
+                            String convTime = convertTime(timeToAdd);
+
                             heartrates[i] = heartRate;
-                            times[i] = timeToAdd;
+                            times[i] = convTime;
 
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
                     }
-                    Cartesian cartesian = AnyChart.line();
-                    cartesian.animation(true);
-                    cartesian.padding(10d, 20d, 5d, 20d);
-                    cartesian.crosshair().enabled(true);
-                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-                    cartesian.title("Heart Rate History");
-                    cartesian.yAxis(0).title("Heart Rate");
-                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
-                    List<DataEntry> lineVals = new ArrayList<>();
-                    for (int i = 0; i < response.length(); i++) {
-
-                        ValueDataEntry d = new ValueDataEntry(times[i], heartrates[i]);
-                        lineVals.add(d);
+                    ArrayList<String> choices = new ArrayList<>();
+                    if (days.size() != 0) {
+                        choices.add("Daily");
+                    }
+                    if (months.size() != 0) {
+                        choices.add("Monthly");
                     }
 
-                    set.data(lineVals);
-                    Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+                    ArrayAdapter<String> dateAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, choices);
+                    dateAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    datesSpinner.setAdapter(dateAdapter);
+                    datesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                        @Override
+                        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                            String choice = adapterView.getItemAtPosition(i).toString();
 
-                    Line series1 = cartesian.line(series1Mapping);
-                    series1.name("Heart Rate");
-                    series1.hovered().markers().enabled(true);
-                    series1.hovered().markers()
-                            .type(MarkerType.CIRCLE)
-                            .size(4d);
-                    series1.tooltip()
-                            .position("right")
-                            .anchor(Anchor.LEFT_CENTER)
-                            .offsetX(5d)
-                            .offsetY(5d);
+                            ArrayList<Integer> chosenHeartrates = new ArrayList<>();
+                            ArrayList<String> chosenTimes = new ArrayList<>();
 
-                    cartesian.legend().enabled(false);
-                    cartesian.legend().fontSize(13d);
-                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+                            if (choice.equals("Monthly")) {
+                                // For monthly, we want to graph all the readings for that month with the dates as the x-axis
 
-                    if (firstLoad) {
-                        graph.setChart(cartesian);
-                        firstLoad = false;
-                    }
+                                if (months.size() > 1) {
+                                    ArrayList<String> distinctMonths = new ArrayList<>();
+                                    String prev = "";
+                                    for(int m = 0; m < months.size(); m++) {
+                                        if (m == 0) {
+                                            prev = months.get(m);
+                                            distinctMonths.add(prev);
+                                        }
+                                        else {
+                                            if (prev.equals(months.get(m))) {
+                                                continue;
+                                            }
+                                            else {
+                                                distinctMonths.add(months.get(m));
+                                                prev = months.get(m);
+                                            }
+                                        }
+                                    }
+                                    ArrayList<String> distinctConvMonths = new ArrayList<>();
+
+                                    for (String m : distinctMonths) {
+                                        distinctConvMonths.add(convertMonth(m));
+                                    }
+                                    detailedDatesSpinner.setVisibility(View.VISIBLE);
+                                    ArrayAdapter<String> detailedDateAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, distinctConvMonths);
+                                    detailedDateAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                                    detailedDatesSpinner.setAdapter(detailedDateAdapter);
+                                    if (!currentMonthChoice.equals("")) {
+                                        detailedDatesSpinner.setSelection(distinctConvMonths.indexOf(currentMonthChoice));
+                                    }
+                                    detailedDatesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                                        @Override
+                                        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                                            String choice = adapterView.getItemAtPosition(i).toString();
+                                            currentChoice = choice;
+                                            //Log.d(TAG, "Date selected: " + choice);
+                                            //Log.d(TAG, "firstLoad: " + firstLoad);
+                                            chosenHeartrates.clear();
+                                            chosenTimes.clear();
+
+                                            for (int k = 0; k < months.size(); k++) {
+                                                if (months.get(k).equals(convertMonthBack(choice))) {
+                                                    Log.d(TAG, "Days found: " + days.get(k));
+                                                    Log.d(TAG, "HR found: " + heartrates[k]);
+                                                    chosenHeartrates.add(heartrates[k]);
+                                                    chosenTimes.add(days.get(k) + " " + times[k]);
+                                                }
+                                            }
+
+                                            APIlib.getInstance().setActiveAnyChartView(graph);
+
+                                            if (firstLoad) {
+                                                cartesian = AnyChart.line();
+                                                cartesian.animation(true);
+                                                cartesian.padding(10d, 20d, 5d, 20d);
+                                                cartesian.crosshair().enabled(true);
+                                                cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                                                cartesian.yAxis(0).title("Heart Rate");
+                                                cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                                            }
+                                            else {
+                                                cartesian.removeAllSeries();
+                                            }
+                                            cartesian.title("Heart Rate History (Monthly) " + choice);
+
+                                            List<DataEntry> lineVals = new ArrayList<>();
+                                            for (int j = 0; j < chosenTimes.size(); j++) {
+                                                ValueDataEntry d = new ValueDataEntry(chosenTimes.get(j), chosenHeartrates.get(j));
+                                                lineVals.add(d);
+                                                //Log.d(TAG, "ChosenTime: " + chosenTimes.get(j));
+                                                //Log.d(TAG, "ChosenHR: " + chosenHeartrates.get(j));
+                                                //Log.d(TAG, "Linevals: " + lineVals.get(j).getValue("x"));
+                                            }
+
+                                            //set.data(lineVals);
+                                            //Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                                            Line series1 = cartesian.line(lineVals);
+                                            series1.name("Heart Rate");
+                                            series1.hovered().markers().enabled(true);
+                                            series1.hovered().markers()
+                                                    .type(MarkerType.CIRCLE)
+                                                    .size(4d);
+                                            series1.tooltip()
+                                                    .position("right")
+                                                    .anchor(Anchor.LEFT_CENTER)
+                                                    .offsetX(5d)
+                                                    .offsetY(5d);
+
+                                            cartesian.xAxis(0).labels().rotation(-45);
+
+                                            if (firstLoad) {
+                                                graph.setChart(cartesian);
+                                                firstLoad = false;
+                                            }
+
+                                        }
+
+                                        @Override
+                                        public void onNothingSelected(AdapterView<?> adapterView) {
+
+                                        }
+                                    });
+                                }
+                                else {
+                                    detailedDatesSpinner.setVisibility(View.INVISIBLE);
+                                    //Cartesian cartesian = AnyChart.line();
+                                    cartesian.animation(true);
+                                    cartesian.padding(10d, 20d, 5d, 20d);
+                                    cartesian.crosshair().enabled(true);
+                                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                                    cartesian.title("Heart Rate History (Monthly)");
+                                    cartesian.yAxis(0).title("Heart Rate");
+                                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                                    cartesian.xAxis(0).labels().rotation(-45);
+
+                                    List<DataEntry> lineVals = new ArrayList<>();
+                                    for (int j = 0; j < response.length(); j++) {
+                                        ValueDataEntry d = new ValueDataEntry(times[j], heartrates[j]);
+                                        lineVals.add(d);
+                                    }
+
+                                    //set.data(lineVals);
+                                    //Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                                    Line series1 = cartesian.line(lineVals);
+                                    series1.name("Heart Rate");
+                                    series1.hovered().markers().enabled(true);
+                                    series1.hovered().markers()
+                                            .type(MarkerType.CIRCLE)
+                                            .size(4d);
+                                    series1.tooltip()
+                                            .position("right")
+                                            .anchor(Anchor.LEFT_CENTER)
+                                            .offsetX(5d)
+                                            .offsetY(5d);
+
+                                    cartesian.legend().enabled(false);
+                                    cartesian.legend().fontSize(13d);
+                                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+                                    //if (firstLoad) {
+                                    //   graph.setChart(cartesian);
+                                    //   firstLoad = false;
+                                    //}
+                                }
+                            }
+                            else if (choice.equals("Daily")) {
+                                // For daily, we want to graph all the readings for that day with the times they were read as the x-axis
+
+                                if (days.size() > 1) {
+                                    ArrayList<String> distinctDays = new ArrayList<>();
+                                    String prev = "";
+                                    for(int m = 0; m < days.size(); m++) {
+                                        if (m == 0) {
+                                            prev = days.get(m);
+                                            distinctDays.add(prev);
+                                        }
+                                        else {
+                                            if (prev.equals(days.get(m))) {
+                                                continue;
+                                            }
+                                            else {
+                                                distinctDays.add(days.get(m));
+                                                prev = days.get(m);
+                                            }
+                                        }
+                                    }
+                                    detailedDatesSpinner.setVisibility(View.VISIBLE);
+                                    ArrayAdapter<String> detailedDateAdapter = new ArrayAdapter<String>(context, android.R.layout.simple_spinner_item, distinctDays);
+                                    detailedDateAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                                    detailedDatesSpinner.setAdapter(detailedDateAdapter);
+                                    if (!currentChoice.equals("")) {
+                                        detailedDatesSpinner.setSelection(distinctDays.indexOf(currentChoice));
+                                    }
+                                    detailedDatesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                                        @Override
+                                        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                                            String choice = adapterView.getItemAtPosition(i).toString();
+                                            currentChoice = choice;
+                                            //Log.d(TAG, "Date selected: " + choice);
+                                            //Log.d(TAG, "firstLoad: " + firstLoad);
+                                            chosenHeartrates.clear();
+                                            chosenTimes.clear();
+
+                                            for (int k = 0; k < days.size(); k++) {
+                                                if (days.get(k).equals(choice)) {
+                                                    //Log.d(TAG, "Days found: " + days.get(k));
+                                                    chosenHeartrates.add(heartrates[k]);
+                                                    chosenTimes.add(times[k]);
+                                                }
+                                            }
+
+                                            APIlib.getInstance().setActiveAnyChartView(graph);
+
+                                            if (firstLoad) {
+                                                cartesian = AnyChart.line();
+                                                cartesian.animation(true);
+                                                cartesian.padding(10d, 20d, 5d, 20d);
+                                                cartesian.crosshair().enabled(true);
+                                                cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                                                cartesian.yAxis(0).title("Heart Rate");
+                                                cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                                            }
+                                            else {
+                                                cartesian.removeAllSeries();
+                                            }
+                                            cartesian.title("Heart Rate History (Daily) " + choice);
+
+                                            List<DataEntry> lineVals = new ArrayList<>();
+                                            for (int j = 0; j < chosenTimes.size(); j++) {
+                                                ValueDataEntry d = new ValueDataEntry(chosenTimes.get(j), chosenHeartrates.get(j));
+                                                lineVals.add(d);
+                                                //Log.d(TAG, "ChosenTime: " + chosenTimes.get(j));
+                                                //Log.d(TAG, "ChosenHR: " + chosenHeartrates.get(j));
+                                                //Log.d(TAG, "Linevals: " + lineVals.get(j).getValue("x"));
+                                            }
+
+                                            //set.data(lineVals);
+                                            //Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                                            Line series1 = cartesian.line(lineVals);
+                                            series1.name("Heart Rate");
+                                            series1.hovered().markers().enabled(true);
+                                            series1.hovered().markers()
+                                                    .type(MarkerType.CIRCLE)
+                                                    .size(4d);
+                                            series1.tooltip()
+                                                    .position("right")
+                                                    .anchor(Anchor.LEFT_CENTER)
+                                                    .offsetX(5d)
+                                                    .offsetY(5d);
+
+                                            cartesian.xAxis(0).labels().rotation(-45);
+
+
+
+                                            if (firstLoad) {
+                                                graph.setChart(cartesian);
+                                                firstLoad = false;
+                                            }
+
+                                        }
+
+                                        @Override
+                                        public void onNothingSelected(AdapterView<?> adapterView) {
+
+                                        }
+                                    });
+                                }
+                                else {
+                                    //Cartesian cartesian = AnyChart.line();
+                                    detailedDatesSpinner.setVisibility(View.INVISIBLE);
+                                    cartesian.animation(true);
+                                    cartesian.padding(10d, 20d, 5d, 20d);
+                                    cartesian.crosshair().enabled(true);
+                                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                                    cartesian.title("Heart Rate History (Daily)");
+                                    cartesian.yAxis(0).title("Heart Rate");
+                                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+
+                                    List<DataEntry> lineVals = new ArrayList<>();
+                                    for (int j = 0; j < response.length(); j++) {
+                                        ValueDataEntry d = new ValueDataEntry(times[j], heartrates[j]);
+                                        lineVals.add(d);
+                                    }
+
+                                    //set.data(lineVals);
+                                    //Mapping series1Mapping = set.mapAs("{ x: 'x', value: 'value' }");
+
+                                    Line series1 = cartesian.line(lineVals);
+                                    series1.name("Heart Rate");
+                                    series1.hovered().markers().enabled(true);
+                                    series1.hovered().markers()
+                                            .type(MarkerType.CIRCLE)
+                                            .size(4d);
+                                    series1.tooltip()
+                                            .position("right")
+                                            .anchor(Anchor.LEFT_CENTER)
+                                            .offsetX(5d)
+                                            .offsetY(5d);
+
+                                    cartesian.legend().enabled(false);
+                                    cartesian.legend().fontSize(13d);
+                                    cartesian.legend().padding(0d, 0d, 10d, 0d);
+
+                                    //if (firstLoad) {
+                                     //   graph.setChart(cartesian);
+                                     //   firstLoad = false;
+                                    //}
+                                }
+                            }
+
+                        }
+
+                        @Override
+                        public void onNothingSelected(AdapterView<?> adapterView) {
+
+                        }
+                    });
+
                 }, error -> {
             Log.d("ERROR", error.toString());
 
@@ -370,11 +677,12 @@ public class HeartRate extends Fragment {
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void updateHR(String newHR) {
         p.dismiss();
-        try {
-            heartRateLabel.setText("Heart Rate: " + newHR + " BPM");
-        } catch(Exception e) {
-
-        }
+        heartRateLabel.post(new Runnable() {
+            @Override
+            public void run() {
+                heartRateLabel.setText("Heart Rate: " + newHR + " BPM");
+            }
+        });
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
         LocalDateTime now = LocalDateTime.now();
@@ -474,6 +782,122 @@ public class HeartRate extends Fragment {
             else {
                 Toast.makeText(context, "Bluetooth Permission Denied", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private String convertMonth(String month) {
+        switch(month) {
+            case "1":
+                return "Jan.";
+            case "2":
+                return "Feb.";
+            case "3":
+                return "Mar.";
+            case "4":
+                return "Apr.";
+            case "5":
+                return "May.";
+            case "6":
+                return "Jun.";
+            case "7":
+                return "Jul.";
+            case "8":
+                return "Aug.";
+            case "9":
+                return "Sep.";
+            case "10":
+                return "Oct.";
+            case "11":
+                return "Nov.";
+            case "12":
+                return "Dec.";
+            default:
+                return "";
+        }
+    }
+
+    private String convertMonthBack(String month) {
+        switch(month) {
+            case "Jan.":
+                return "1";
+            case "Feb.":
+                return "2";
+            case "Mar.":
+                return "3";
+            case "Apr.":
+                return "4";
+            case "May.":
+                return "5";
+            case "Jun.":
+                return "6";
+            case "Jul.":
+                return "7";
+            case "Aug.":
+                return "8";
+            case "Sep.":
+                return "9";
+            case "Oct.":
+                return "10";
+            case "Nov.":
+                return "11";
+            case "Dec.":
+                return "12";
+            default:
+                return "";
+        }
+    }
+
+    private String convertTime(String time) {
+        String[] split = time.split(":");
+
+        if (Integer.parseInt(split[0]) == 0) {
+            return "12:" + split[1] + " AM";
+        }
+
+        if (Integer.parseInt(split[0]) >= 12) {
+            String holder = "";
+            switch(split[0]) {
+                case "12":
+                    holder = "12:" + split[1] + " PM";
+                    break;
+                case "13":
+                    holder = "1:" + split[1] + " PM";
+                    break;
+                case "14":
+                    holder = "2:" + split[1] + " PM";
+                    break;
+                case "15":
+                    holder = "3:" + split[1] + " PM";
+                    break;
+                case "16":
+                    holder = "4:" + split[1] + " PM";
+                    break;
+                case "17":
+                    holder = "5:" + split[1] + " PM";
+                    break;
+                case "18":
+                    holder = "6:" + split[1] + " PM";
+                    break;
+                case "19":
+                    holder = "7:" + split[1] + " PM";
+                    break;
+                case "20":
+                    holder = "8:" + split[1] + " PM";
+                    break;
+                case "21":
+                    holder = "9:" + split[1] + " PM";
+                    break;
+                case "22":
+                    holder = "10:" + split[1] + " PM";
+                    break;
+                case "23":
+                    holder = "11:" + split[1] + " PM";
+                    break;
+            }
+            return holder;
+        }
+        else {
+            return time + " AM";
         }
     }
 

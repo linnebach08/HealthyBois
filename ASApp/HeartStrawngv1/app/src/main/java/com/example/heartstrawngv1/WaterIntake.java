@@ -147,8 +147,6 @@ public class WaterIntake extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        FragmentActivity activity = getActivity();
 
         Bundle extras = this.getArguments();
         if (extras != null) {
@@ -157,48 +155,6 @@ public class WaterIntake extends Fragment {
         else {
             userID = -1;
         }
-
-        // Check if bluetooth is enabled
-
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(activity, "Bluetooth not available", Toast.LENGTH_LONG).show();
-        }
-
-        boolean created = false;
-        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_CONNECT)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
-        }
-        else {
-            pairedDevices = mBluetoothAdapter.getBondedDevices();
-            for (BluetoothDevice bt : pairedDevices) {
-                if (bt.getAddress().equals("00:21:06:BE:99:36")) {
-                    sensor = bt;
-                    created = true;
-                }
-                Log.d("BT", bt.getName());
-            }
-
-        }
-
-        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_SCAN }, 102);
-        }
-        else {
-            if (!created) {
-                pairedDevices = mBluetoothAdapter.getBondedDevices();
-                for (BluetoothDevice bt : pairedDevices) {
-                    if (bt.getAddress().equals("00:21:06:BE:99:36")) {
-                        sensor = bt;
-                    }
-                    Log.d("BT", bt.getName());
-                }
-            }
-
-        }
-
-
         //Wearable.getDataClient(this.getContext()).addListener(this);
     }
 
@@ -233,6 +189,49 @@ public class WaterIntake extends Fragment {
         tempLabel = view.findViewById(R.id.temp_label);
         graph = view.findViewById(R.id.waterintake_graph_view);
         set = com.anychart.data.Set.instantiate();
+
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        // Check if bluetooth is enabled
+        FragmentActivity activity = getActivity();
+
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(context, "Bluetooth not available", Toast.LENGTH_LONG).show();
+        }
+
+        boolean created = false;
+        if(ContextCompat.checkSelfPermission(activity, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_CONNECT }, 101);
+        }
+        else {
+            pairedDevices = mBluetoothAdapter.getBondedDevices();
+            for (BluetoothDevice bt : pairedDevices) {
+                if (bt.getAddress().equals("00:21:06:BE:99:36")) {
+                    sensor = bt;
+                    created = true;
+                }
+                Log.d("BT", bt.getName());
+            }
+
+        }
+
+        if(ContextCompat.checkSelfPermission(activity.getApplicationContext(), Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, new String[] { Manifest.permission.BLUETOOTH_SCAN }, 102);
+        }
+        else {
+            if (!created) {
+                pairedDevices = mBluetoothAdapter.getBondedDevices();
+                for (BluetoothDevice bt : pairedDevices) {
+                    if (bt.getAddress().equals("00:21:06:BE:99:36")) {
+                        sensor = bt;
+                    }
+                    Log.d("BT", bt.getName());
+                }
+            }
+
+        }
 
 
         newL = new LooperThread();
@@ -274,7 +273,7 @@ public class WaterIntake extends Fragment {
         String postUrl = "https://heartstrawng.azurewebsites.net/water-intake/readings/" + userID;
 
         // Request a string response from the provided URL.
-        JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
+        /*JsonArrayRequest getWaterIntakeRequest = new JsonArrayRequest(Request.Method.GET, postUrl,
                 null,
                 response -> {
                     String[] startTimes = new String[response.length()];
@@ -348,7 +347,7 @@ public class WaterIntake extends Fragment {
         getWaterIntakeRequest.setRetryPolicy(new DefaultRetryPolicy(50000, 5, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
 
         // Add the request to the RequestQueue.
-        queue.add(getWaterIntakeRequest);
+        queue.add(getWaterIntakeRequest);*/
 
         /*SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
         String heartrateVals = sharedPref.getString("HeartrateVals", "");
