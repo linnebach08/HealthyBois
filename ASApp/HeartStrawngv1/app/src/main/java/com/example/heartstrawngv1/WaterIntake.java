@@ -25,6 +25,8 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,6 +35,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
+import com.anychart.APIlib;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -92,7 +95,8 @@ public class WaterIntake extends Fragment {
     boolean clicked = false;
     boolean firstLoad = true;
     int userID;
-    String partialMessage = "";
+    boolean showDay = true;
+    Cartesian cartesian;
 
     class LooperThread extends Thread {
         public Handler mHandler;
@@ -243,7 +247,9 @@ public class WaterIntake extends Fragment {
         tempLabel = view.findViewById(R.id.temp_label);
         graph = view.findViewById(R.id.waterintake_graph_view);
         set = com.anychart.data.Set.instantiate();
-
+        RadioButton dailyView = view.findViewById(R.id.dayViewButton);
+        RadioButton weeklyView = view.findViewById(R.id.weeklyViewButton);
+        dailyView.setChecked(true);
 
         newL = new LooperThread();
         newL.start();
@@ -271,10 +277,36 @@ public class WaterIntake extends Fragment {
 
         });
 
+        dailyView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b) {
+                    showDay = true;
+                }
+                else {
+                    showDay = false;
+                }
+                showGraph(showDay);
+            }
+        });
+
+        weeklyView.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                if (b) {
+                    showDay = false;
+                }
+                else {
+                    showDay = true;
+                }
+                showGraph(showDay);
+            }
+        });
+
         //SharedPreferences sharedPref = context.getSharedPreferences("SHARED_PREFS", 0);
         //if (sharedPref.contains("HeartrateVals")) {
-        showGraph(true);
         //}
+        showGraph(showDay);
 
         return view;
     }
@@ -317,14 +349,21 @@ public class WaterIntake extends Fragment {
                             e.printStackTrace();
                         }
                     }
-                    Cartesian cartesian = AnyChart.line();
-                    cartesian.animation(true);
-                    cartesian.padding(10d, 20d, 5d, 20d);
-                    cartesian.crosshair().enabled(true);
-                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-                    cartesian.title("Water Intake History");
-                    cartesian.yAxis(0).title("Amount Drank (L)");
-                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                    APIlib.getInstance().setActiveAnyChartView(graph);
+
+                    if (firstLoad) {
+                        cartesian = AnyChart.line();
+                        cartesian.animation(true);
+                        cartesian.padding(10d, 20d, 5d, 20d);
+                        cartesian.crosshair().enabled(true);
+                        cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                        cartesian.title("Water Intake History");
+                        cartesian.yAxis(0).title("Amount Drank (L)");
+                        cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                    }
+                    else {
+                        cartesian.removeAllSeries();
+                    }
 
                     List<DataEntry> lineVals = new ArrayList<>();
                     for (int i = 0; i < response.length(); i++) {
@@ -407,14 +446,21 @@ public class WaterIntake extends Fragment {
                             e.printStackTrace();
                         }
                     }
-                    Cartesian cartesian = AnyChart.column();
-                    cartesian.animation(true);
-                    cartesian.padding(10d, 20d, 5d, 20d);
-                    cartesian.crosshair().enabled(true);
-                    cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
-                    cartesian.title("Water Intake History");
-                    cartesian.yAxis(0).title("Amount Drank (L)");
-                    cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                    APIlib.getInstance().setActiveAnyChartView(graph);
+
+                    if (firstLoad) {
+                        cartesian = AnyChart.column();
+                        cartesian.animation(true);
+                        cartesian.padding(10d, 20d, 5d, 20d);
+                        cartesian.crosshair().enabled(true);
+                        cartesian.crosshair().yLabel(true).yStroke((Stroke) null, null, null, (String) null, (String) null);
+                        cartesian.title("Water Intake History");
+                        cartesian.yAxis(0).title("Amount Drank (L)");
+                        cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
+                    }
+                    else {
+                        cartesian.removeAllSeries();
+                    }
 
                     List<DataEntry> columnVals = new ArrayList<>();
                     for (int i = 0; i < response.length(); i++) {
@@ -519,7 +565,7 @@ public class WaterIntake extends Fragment {
             depthLabel.post(new Runnable() {
                 @Override
                 public void run() {
-                    depthLabel.setText("Depth: " + df.format(depth_meters) + " meters");
+                    depthLabel.setText("Depth: " + df.format(depth_meters / 0.0254) + " inches");
                 }
             });
 
