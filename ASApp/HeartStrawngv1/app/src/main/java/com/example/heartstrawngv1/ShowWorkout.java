@@ -14,6 +14,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.anychart.APIlib;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.core.scatter.series.Marker;
@@ -276,16 +277,15 @@ public class ShowWorkout extends AppCompatActivity {
                             showGraph(firstLoad, exerciseName, selectedDate[0], currentRepsVals.get(exerciseName), currentWeightVals.get(exerciseName));
                         }
                         else {
-                            chartView.clear();
-                            Scatter newScatter = AnyChart.scatter();
-                            newScatter.title("No Data");
-                            newScatter.noData().label().enabled(true);
-                            chartView.setChart(newScatter);
-                            //noData.enabled(true);
-                            //noData.text("No exercise history found");
-                            //noData.background().enabled(true);
-                            //noData.background().fill("White 0.5");
-                            //noData.padding(20, 20, 20, 20);
+                            APIlib.getInstance().setActiveAnyChartView(chartView);
+                            scatter.removeAllSeries();
+
+                            scatter.title("Workout History Data Not Found");
+                            Label noDataLabel = scatter.noData().label();
+                            noDataLabel.enabled(true);
+                            noDataLabel.text("Error: Workout History Not Found");
+                            noDataLabel.background().enabled(true);
+                            noDataLabel.background().fill("White 0.5");
                         }
                     }
                     @Override

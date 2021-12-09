@@ -340,8 +340,10 @@ public class WaterIntake extends Fragment {
                             String[] timeSplitStart = date.split("T")[1].split(":");
                             String timeToAddStart = timeSplitStart[0] + ":" + timeSplitStart[1];
 
+                            String convTime = convertTime(timeToAddStart);
+
                             //System.out.println("start time" + timeToAddStart + "measurement " + waterIntake + " L");
-                            startTimes[i] = timeToAddStart;
+                            startTimes[i] = convTime;
                             waterIntakes[i] = waterIntake;
 
 
@@ -636,7 +638,7 @@ public class WaterIntake extends Fragment {
                                 graph.post(new Runnable() {
                                     @Override
                                     public void run() {
-                                        showGraph(true);
+                                        showGraph(showDay);
                                     }
                                 });
 
@@ -644,7 +646,7 @@ public class WaterIntake extends Fragment {
                         graph.post(new Runnable() {
                             @Override
                             public void run() {
-                                showGraph(true);
+                                showGraph(showDay);
                             }
                         });
 
@@ -705,6 +707,60 @@ public class WaterIntake extends Fragment {
             else {
                 Toast.makeText(context, "Bluetooth Permission Denied", Toast.LENGTH_SHORT).show();
             }
+        }
+    }
+
+    private String convertTime(String time) {
+        String[] split = time.split(":");
+
+        if (Integer.parseInt(split[0]) == 0) {
+            return "12:" + split[1] + " AM";
+        }
+
+        if (Integer.parseInt(split[0]) >= 12) {
+            String holder = "";
+            switch(split[0]) {
+                case "12":
+                    holder = "12:" + split[1] + " PM";
+                    break;
+                case "13":
+                    holder = "1:" + split[1] + " PM";
+                    break;
+                case "14":
+                    holder = "2:" + split[1] + " PM";
+                    break;
+                case "15":
+                    holder = "3:" + split[1] + " PM";
+                    break;
+                case "16":
+                    holder = "4:" + split[1] + " PM";
+                    break;
+                case "17":
+                    holder = "5:" + split[1] + " PM";
+                    break;
+                case "18":
+                    holder = "6:" + split[1] + " PM";
+                    break;
+                case "19":
+                    holder = "7:" + split[1] + " PM";
+                    break;
+                case "20":
+                    holder = "8:" + split[1] + " PM";
+                    break;
+                case "21":
+                    holder = "9:" + split[1] + " PM";
+                    break;
+                case "22":
+                    holder = "10:" + split[1] + " PM";
+                    break;
+                case "23":
+                    holder = "11:" + split[1] + " PM";
+                    break;
+            }
+            return holder;
+        }
+        else {
+            return time + " AM";
         }
     }
 
