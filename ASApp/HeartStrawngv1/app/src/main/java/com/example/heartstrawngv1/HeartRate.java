@@ -311,7 +311,7 @@ public class HeartRate extends Fragment {
                             if (dateSplit[2].charAt(0) == '0') {
                                 dateSplit[2] = String.valueOf(dateSplit[2].charAt(1));
                             }
-                            
+
                             days.add(convMonth + " " + dateSplit[2]);
 
                             String[] timeSplit = fullSplit[1].split(":");
